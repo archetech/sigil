@@ -54,10 +54,13 @@ audience MUST refuse.
 
 ## Lifecycle
 
-**AC-7** — A verifier MUST enforce `validFrom`/`validUntil` and MUST resolve `credentialStatus`, denying on expiry,
-on revocation, or on an unresolvable status (fail-closed).
-· Actor: Verifier · Traces: R9, R10 · docs §2, §6.5, §6.6
-· **Verify:** expired → deny; revoked → deny; status endpoint unreachable → deny.
+**AC-7** — A verifier MUST enforce `validFrom`/`validUntil`, and MUST determine revocation by **resolving
+(replaying) the credential's DID**: a `delete` operation (`deactivated: true`) is revocation and MUST deny; an
+unresolvable credential MUST deny (fail-closed). Revocation is **irreversible** — temporary suspension MUST use
+short validity + re-issue, not `delete`.
+· Actor: Verifier · Traces: R9, R10 · docs §2, §6 · [`archon-substrate.md`](../docs/archon-substrate.md)
+· **Verify:** expired → deny; a credential whose DID replays to `deactivated: true` → deny; unresolvable → deny;
+a `delete` cannot be reversed.
 
 **AC-8** — A delegated AAC's `authorization` MUST be a subset of its `parent`'s; widening MUST be refused at
 issuance and MUST be unrepresentable in a verified chain. Verification MUST walk the `parent` chain to its root

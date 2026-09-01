@@ -32,8 +32,10 @@ a requested action `A`/`R`, audience `V`, nonce `N`, the verifier confirms **all
    agent, not revoked); `AAC_root.issuer` is the controller / a party to the VRC.
 3. **Linkage** — for each `i > 0`: `AAC_i.issuer == AAC_{i-1}.credentialSubject.id` **and** `AAC_i.parent`
    references `AAC_{i-1}`. (The delegator of a hop is the subject of its parent.)
-4. **Signature** — each hop's `issuer` signature verifies (resolve the issuer DID for keys — identity resolution,
-   not delegator consultation).
+4. **Signature (at signing version)** — each hop's `issuer` signature verifies against the delegator's key state
+   **as of when it signed** — resolve the issuer DID at the hop's signing version (`versionTime` / `versionId`; see
+   [`archon-substrate.md`](archon-substrate.md)), by replaying its operation log, not by consulting the delegator.
+   A later key rotation therefore never invalidates a validly-signed past delegation.
 5. **Delegability + attenuation** — each parent has `authorization.delegable == true`, and each
    `AAC_i.authorization ⊆ AAC_{i-1}.authorization` (monotonic; see `agent-credential.md` AC-8). Any widening or a
    non-delegable parent ⇒ deny.
@@ -78,3 +80,5 @@ open.*
 - `[D-DC-2 → DC-2]` §2 — the complete ordered chain is presented (missing hop ⇒ deny).
 - `[D-DC-3 → DC-3]` §3 — root anchored to the controller/VRC; leaf holder-bound.
 - `[D-DC-4 → DC-4, R6]` §2 — linkage + delegability (each hop issued by its parent's subject; parent permitted it).
+- `[D-DC-5 → DC-5, R8]` §2 — verify each hop against the signer's key state at its signing version (point-in-time
+  resolution); revocation checked current.

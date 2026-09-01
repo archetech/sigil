@@ -82,7 +82,11 @@ A concrete `ldp_vc` (JSON-LD, W3C VCDM 2.0) example — the encoding that maps d
     controller). A delegated AAC's `authorization` MUST be a subset of its `parent`'s (monotonic attenuation).
 - **`validFrom` / `validUntil`** — short-lived by default (minutes–hours), for lifecycle hygiene; re-issue rather
   than long-live.
-- **`credentialStatus`** — revocation reference. Verification is **fail-closed**: unresolvable or revoked ⇒ deny.
+- **Revocation** — a **`delete` operation** on the credential's DID (→ `deactivated: true`), seen by *replaying*
+  the DID; there is no separate status list (see [`archon-substrate.md`](archon-substrate.md)). It is
+  **irreversible** — use short validity + re-issue for temporary suspension. Verification is **fail-closed**: a
+  deactivated or unresolvable credential ⇒ deny. (A holder's manifest `reveal: false` un-publishes a credential —
+  disclosure control, distinct from revocation.)
 - **`assuranceLevel`** — the trust level (see §5), seeded from what the issuance actually proved.
 
 ## 3. The three bindings, precisely
@@ -100,10 +104,12 @@ A concrete `ldp_vc` (JSON-LD, W3C VCDM 2.0) example — the encoding that maps d
 ## 4. Lifecycle — on Archon rails
 
 The AAC rides the issue → deliver → hold → present → verify path already provided by Archon (see
-`presentation-model.md`), including to non-native agents:
+`presentation-model.md`), including to non-native agents. The keymaster verbs below are the API over Archon DID
+operations: *issue* ≈ `create` the credential asset DID (issuer-signed); *hold/accept* ≈ `update` the holder
+agent's `manifest`; *revoke* ≈ `delete` (see [`archon-substrate.md`](archon-substrate.md)).
 
-1. **Issue.** The controller mints the AAC over its agent's DID (Archon `bindCredential` / `issueCredential`),
-   signing as the controlling entity.
+1. **Issue.** The controller mints the AAC as an asset DID over its agent's DID (Archon `bindCredential` /
+   `issueCredential`), signing as the controlling entity.
 2. **Deliver.** The controller sends it over DIDComm (`send_credential_didcomm`) to the agent — which MAY be
    `did:web` (resolved via the gatekeeper's universal-resolver fallback), delivered to the agent's mailbox / via a
    mediator.
@@ -138,8 +144,8 @@ Given a presented VP for a requested action `A` on resource `R`, with verifier a
 4. **Authorization** — `A ∈ authorization.actions` **and** `R ∈ authorization.resources` **and** all
    `constraints` hold (incl. `V ∈ constraints.audience`).
 5. **Validity** — `now ∈ [validFrom, validUntil]`.
-6. **Status** — the AAC's `credentialStatus` **and** the referenced VRC's status resolve and are not revoked; a
-   revoked VRC invalidates every AAC referencing it. *Unresolvable ⇒ deny.*
+6. **Revocation** — resolve (replay) the AAC's DID **and** the referenced VRC's DID; neither is `deactivated` (a
+   `delete`). A `delete` on the VRC invalidates every AAC referencing it. *Deactivated or unresolvable ⇒ deny.*
 7. **(If delegated)** — walk `parent` to the root; each hop's `authorization ⊆ parent.authorization`; no hop
    revoked. *Any break ⇒ deny the whole chain.*
 
