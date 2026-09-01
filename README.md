@@ -36,3 +36,10 @@ Requirements/    the requirements documents (start with sigil-v0-requirements.md
 
 More directories (design notes, protocol drafts, a reference implementation) will land as the anchor use-case is
 chosen and specified.
+
+## Governance & license
+
+Sigil is a project under the [Archonomicon](https://github.com/archetech/archonomicon), the Archetech Nomicon —
+its decisions are made and recorded through that process, alongside Archon.
+
+Licensed under the [MIT License](LICENSE).
