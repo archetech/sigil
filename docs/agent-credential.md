@@ -3,9 +3,9 @@
 **Status:** design note, v0 · the credential the anchor use-case presents and verifies.
 Requirements captured in [`Requirements/agent-credential.md`](../Requirements/agent-credential.md).
 
-> **Updated by [`aac-dtg-reconciliation.md`](aac-dtg-reconciliation.md) (Option B):** the control binding is a
-> *reference to a ToIP DTG **VRC*** (a verifiable relationship credential), not the issuer alone — see §2, §3.2,
-> §6. The AAC is Sigil's *capability* layer riding on the DTG trust graph.
+> **Updated by [`aac-dtg-reconciliation.md`](aac-dtg-reconciliation.md):** the control binding is a *reference to a
+> ToIP DTG **VRC*** (a verifiable relationship credential), not the issuer alone — see §2, §3.2, §6. The AAC is
+> Sigil's *capability* layer riding on the DTG trust graph.
 
 ## 1. What it is
 

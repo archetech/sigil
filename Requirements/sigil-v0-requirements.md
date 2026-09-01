@@ -1,7 +1,7 @@
 # Sigil — Verifiable AI Agent Identity on Archon
 
 **v0 · discussion draft · not a specification**
-Audience: the Sigil collaboration (flaxscrip + macterra, with Morningstar and GenitriX).
+Audience: the Sigil collaboration.
 Purpose: agree the *shape* of the problem and the scope before building — a shared starting point, meant to be marked up.
 
 ---

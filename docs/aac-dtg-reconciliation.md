@@ -6,14 +6,14 @@
 
 ## Decision
 
-**Option B — the AAC is a thin Sigil *capability* credential that *references* a DTG VRC.** The durable
-controller↔agent relationship lives in a DTG **Verifiable Relationship Credential (VRC)**; the AAC carries only the
-ephemeral **Capability** and points at the VRC that establishes control.
+**The AAC is a thin Sigil *capability* credential that *references* a DTG VRC.** The durable controller↔agent
+relationship lives in a DTG **Verifiable Relationship Credential (VRC)**; the AAC carries only the ephemeral
+**Capability** and points at the VRC that establishes control.
 
-Rejected: *Option A* (the AAC **is** a VRC extended with a capability claim). The relationship and the capability
-have **different lifecycles** — the controller↔agent edge is stable and long-lived; a capability is short, scoped,
-attenuable, often per-task. Bundling them would force re-issuing the whole relationship every time authority
-changes, and would duplicate what DTG already standardizes.
+The AAC deliberately **references** the relationship rather than **embedding** it. The relationship and the
+capability have **different lifecycles** — the controller↔agent edge is stable and long-lived; a capability is
+short, scoped, attenuable, often per-task. Embedding the relationship in the capability credential would force
+re-issuing the whole relationship every time authority changes, and would duplicate what DTG already standardizes.
 
 ## The layered model
 
@@ -104,5 +104,5 @@ trusted set) → `endorsed` / `witnessed` (VEC / VWC on the graph) → `human-co
 
 ## Traceability
 
-- `[D-AAC-11 → AC-3, AC-13]` — control binding via a referenced DTG VRC (Option B); the AAC is a capability
-  credential on the trust graph.
+- `[D-AAC-11 → AC-3, AC-13]` — control binding via a referenced DTG VRC; the AAC is a capability credential on the
+  trust graph.
