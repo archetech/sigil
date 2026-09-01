@@ -3,6 +3,10 @@
 **Status:** design note, v0 · the credential the anchor use-case presents and verifies.
 Requirements captured in [`Requirements/agent-credential.md`](../Requirements/agent-credential.md).
 
+> **Updated by [`aac-dtg-reconciliation.md`](aac-dtg-reconciliation.md) (Option B):** the control binding is a
+> *reference to a ToIP DTG **VRC*** (a verifiable relationship credential), not the issuer alone — see §2, §3.2,
+> §6. The AAC is Sigil's *capability* layer riding on the DTG trust graph.
+
 ## 1. What it is
 
 The **Agent Authorization Credential (AAC)** is the artifact at the centre of Sigil. It is a W3C Verifiable
@@ -41,7 +45,7 @@ A concrete `ldp_vc` (JSON-LD, W3C VCDM 2.0) example — the encoding that maps d
   },
   "credentialSubject": {
     "id": "did:cid:baga…agentA",
-    "controller": "did:web:acme.example",
+    "relationship": "did:cid:baga…vrc",
     "assuranceLevel": "org-vouched",
     "authorization": {
       "actions": ["invoke:catalog.search", "read:catalog.item"],
@@ -61,12 +65,12 @@ A concrete `ldp_vc` (JSON-LD, W3C VCDM 2.0) example — the encoding that maps d
 
 ### Field decisions
 
-- **`issuer` = the controlling entity (canonical).** The principal/organization directly issues its agent's
-  authorization; the issuer's signature *is* the controller binding and the accountability anchor. No separate
-  attestation is needed in the common case.
-- **`credentialSubject.controller`** — makes the controller explicit and machine-checkable. In the canonical
-  profile it MUST equal `issuer`. A separate **third-party-attestation profile** (issuer = a registrar attesting
-  `controller` = Org X) is a documented extension, not the default.
+- **`issuer` = a party to the referenced relationship.** Canonically the controller; the issuer signs the
+  *capability grant*. The control binding itself is the verified DTG **VRC** referenced below — not the issuer
+  signature alone (see [`aac-dtg-reconciliation.md`](aac-dtg-reconciliation.md)).
+- **`credentialSubject.relationship`** — a reference to the DTG **VRC** that establishes controller↔agent. The
+  controller is **read from the VRC**, not re-asserted here; the AAC `issuer` MUST be a party to it. A witnessed or
+  third-party relationship uses DTG **VWC** rather than a bespoke attestation profile.
 - **`credentialSubject.id`** — the agent's DID. May be `did:cid`, `did:web`, `did:key`, … (method-agnostic, per
   `presentation-model.md` §5). The holder proves control of *this* key at presentation.
 - **`authorization`** — the scope, as a structured, attenuable object:
@@ -86,9 +90,9 @@ A concrete `ldp_vc` (JSON-LD, W3C VCDM 2.0) example — the encoding that maps d
 1. **Identity (agent ↔ key).** `credentialSubject.id` names the agent; the *holder binding* proof at presentation
    demonstrates the presenter controls that DID's key. Neither the credential alone nor the DID alone suffices —
    the live proof against the verifier's nonce is what authenticates the agent.
-2. **Control (agent ↔ controller).** The `issuer` signs the credential; `credentialSubject.controller` names the
-   accountable entity; canonically they are equal. The verifier resolves the controller DID and checks the issuer
-   signature — that chain is the accountability the CG requires.
+2. **Control (agent ↔ controller).** Established by the referenced DTG **VRC**: the verifier resolves and verifies
+   the VRC (signed, not revoked, establishes controller↔agent) and confirms the AAC `issuer` is a party to it. The
+   VRC — not the AAC issuer alone — is the accountability the CG requires.
 3. **Authorization (agent ↔ scope).** `authorization` states exactly what the agent may do; the verifier evaluates
    it against the *specific* action requested, refusing anything outside it. Scope is verified **at the point of
    use**, never assumed from the mere presence of a credential.
@@ -128,13 +132,14 @@ Given a presented VP for a requested action `A` on resource `R`, with verifier a
 `N`, the verifier MUST confirm **all** of:
 
 1. **Holder binding** — the VP proof shows the presenter controls `credentialSubject.id`, bound to `N` and `V`.
-2. **Controller binding** — the AAC's `issuer` signature verifies; `controller` is resolvable; (canonical)
-   `controller == issuer`.
-3. **Trust** — `issuer`/`controller` satisfies the verifier's trust requirement for this interaction (§5).
+2. **Relationship (control)** — the referenced DTG **VRC** resolves and verifies (signed, establishes
+   controller↔agent, not revoked), and the AAC `issuer` is a party to it.
+3. **Trust** — the issuer/relationship satisfies the verifier's trust requirement for this interaction (§5).
 4. **Authorization** — `A ∈ authorization.actions` **and** `R ∈ authorization.resources` **and** all
    `constraints` hold (incl. `V ∈ constraints.audience`).
 5. **Validity** — `now ∈ [validFrom, validUntil]`.
-6. **Status** — `credentialStatus` resolves and is not revoked. *Unresolvable ⇒ deny.*
+6. **Status** — the AAC's `credentialStatus` **and** the referenced VRC's status resolve and are not revoked; a
+   revoked VRC invalidates every AAC referencing it. *Unresolvable ⇒ deny.*
 7. **(If delegated)** — walk `parent` to the root; each hop's `authorization ⊆ parent.authorization`; no hop
    revoked. *Any break ⇒ deny the whole chain.*
 
@@ -166,7 +171,7 @@ new structure — only chain-walking at verification (§6.7).
 Design points (convention: [`traceability.md`](traceability.md)); each realizes the requirement(s) after the arrow:
 
 - `[D-AAC-1 → AC-1, AC-2]` §1 — two distinct bindings (issuer signature = control; holder proof = identity); the credential is **not bearer**.
-- `[D-AAC-2 → AC-3]` §2, §3.2 — issuer = the controlling entity (the control binding).
+- `[D-AAC-2 → AC-3]` §2, §3.2 — control binding via a referenced DTG VRC (the AAC issuer is a party to it).
 - `[D-AAC-3 → AC-4, AC-6]` §2 — structured, attenuable `authorization` (actions / resources / constraints incl. `audience`).
 - `[D-AAC-4 → AC-7]` §2, §6 — short validity + fail-closed revocation status.
 - `[D-AAC-5 → AC-9]` §2, §4 — method-agnostic subject / controller / issuer (`did:web` first-class).

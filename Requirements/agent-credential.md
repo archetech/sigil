@@ -19,12 +19,20 @@ not bearer.
 
 ## Control binding
 
-**AC-3** — The AAC MUST be signed by the controlling entity as `issuer` and MUST carry
-`credentialSubject.controller`; in the canonical profile `controller` MUST equal `issuer`. A verifier MUST verify
-the issuer signature and resolve the controller before relying on the control claim.
-· Actor: Principal, Verifier · Traces: R3, R4 · docs §3.2, §6.2
-· **Verify:** an invalid issuer signature, an unresolvable controller, or `controller ≠ issuer` outside the
-third-party-attestation profile each produce a deny.
+**AC-3** — The control binding (agent ↔ controller) MUST be established by a **referenced ToIP DTG VRC**, not by
+the AAC issuer alone. The AAC MUST carry `credentialSubject.relationship` referencing that VRC; a verifier MUST
+resolve and verify the VRC (signed, establishes controller↔agent, not revoked) and confirm the AAC `issuer` is a
+party to it, before relying on the control claim.
+· Actor: Principal, Verifier · Traces: R3, R4 · docs §3.2, §6.2 · [`aac-dtg-reconciliation.md`](../docs/aac-dtg-reconciliation.md)
+· **Verify:** an AAC with no `relationship`, an unresolvable or revoked VRC, or an `issuer` not party to the VRC,
+each produce a deny.
+
+**AC-13** — A verifier MUST treat the AAC and its referenced VRC as a **fail-closed pair**: a revoked or
+unresolvable VRC invalidates every AAC that references it, and the VRC's validity/status is checked alongside the
+AAC's.
+· Actor: Verifier · Traces: R9, R10 · docs §6 · [`aac-dtg-reconciliation.md`](../docs/aac-dtg-reconciliation.md)
+· **Verify:** revoking the VRC denies a subsequently-presented AAC that references it, even if the AAC itself is
+otherwise valid.
 
 ## Authorization / scope
 
