@@ -37,9 +37,20 @@ Requirements/    the requirements documents (start with sigil-v0-requirements.md
 More directories (design notes, protocol drafts, a reference implementation) will land as the anchor use-case is
 chosen and specified.
 
+## Contributing
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — the issue → PR → merge flow (issues cite requirement IDs; acceptance
+  criteria are the `Verify:` lines; PRs keep the trace in sync).
+- [`AGENTS.md`](AGENTS.md) — working rules for coding agents and the running lessons-learned log.
+- [`docs/traceability.md`](docs/traceability.md) — the four-layer Requirement → Design → Code → Test trace and its
+  generated [`TRACEABILITY.md`](TRACEABILITY.md) matrix.
+- [`docs/ci-and-testing.md`](docs/ci-and-testing.md) — the staged CI gate and testing conventions.
+- [`SECURITY.md`](SECURITY.md) — responsible disclosure.
+
 ## Governance & license
 
 Sigil is a project under the [Archonomicon](https://github.com/archetech/archonomicon), the Archetech Nomicon —
-its decisions are made and recorded through that process, alongside Archon.
+its decisions are made and recorded through that process, alongside Archon. Changes to project *rules* go through a
+Nomicon proposal; code and design changes follow [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Licensed under the [MIT License](LICENSE).
