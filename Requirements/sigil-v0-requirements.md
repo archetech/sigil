@@ -207,7 +207,7 @@ use-case and a principle. This is a first set to react to, not a settled list.
 
 ## 8. Open questions for the collaboration
 
-These are genuinely open — the point of a v0 is to surface them for macterra, not pre-answer them.
+These are genuinely open — the point of a v0 is to surface them for discussion, not pre-answer them.
 
 1. **Credential format** — how much of the agent credential aligns to the CG's emerging VC profile vs. an
    Archon-native shape? Where should Sigil *propose* to the CG rather than follow?
@@ -217,7 +217,7 @@ These are genuinely open — the point of a v0 is to surface them for macterra, 
    role, a legal identifier? How is accountability expressed for a chain of orgs?
 4. **First-contact protocol** — synchronous negotiation vs. presentation-of-credentials-then-verify; how much
    round-trip is acceptable before an interaction?
-5. **Integration priority** — which profile is first (A2A? MCP?), driven by the market demand you're seeing?
+5. **Integration priority** — which profile is first (A2A? MCP?), driven by observed market demand?
 6. **Human-in-the-loop boundary** — what makes an action "high-consequence," and is that Sigil's call, the
    principal's policy, or the verifier's requirement?
 7. **Vocabulary alignment** — do we adopt the CG's terms as they solidify, or seed ours (the actor model above)
@@ -228,7 +228,7 @@ These are genuinely open — the point of a v0 is to surface them for macterra, 
 
 ## 9. Proposed next steps
 
-1. macterra + flaxscrip react to this v0 — cut, add, re-scope; especially §2 (scope), §5 (use-cases), §8.
+1. The collaboration reacts to this v0 — cut, add, re-scope; especially §2 (scope), §5 (use-cases), §8.
 2. Lock the **anchor use-case** (likely UC-1 or the priority A2A exchange) and design it end-to-end against Archon
    primitives as the first vertical slice.
 3. From the anchor slice, derive the **agent-credential profile** (R3/R4/R5) as the first concrete artifact to
