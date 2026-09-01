@@ -116,7 +116,38 @@ naturally with DCQL's credential-query list than with PE's JSONPath descriptors*
 projection (Archon `credentials[]` → `dcql_query.credentials[]`; nonce/domain → `nonce`/`client_id`; response VP →
 `vp_token`), plus the identifier adapter and a format decision.
 
-## 5. Recommendation for Sigil
+## 5. Cross-method issuance & delivery (DIDComm)
+
+Archon's DIDComm is **method-agnostic by explicit requirement**, which makes Sigil's cross-organizational premise
+real rather than aspirational. This is a substrate capability Sigil inherits, not one it must build.
+
+- **Non-native agents are first-class.** Archon requires DIDComm interop with agents on *other* DID methods
+  (`did:web`, `did:key`, `did:peer`, …), not only `did:cid`. Foreign DIDs resolve through the gatekeeper's
+  **universal-resolver fallback**, so a Sigil agent-credential can be **issued to, held by, and presented by** a
+  `did:web` agent — and the **issuer or controller may itself be `did:web`**. No party is `did:cid`-locked.
+  (Test-covered in Archon: credential issuance to `did:web:…` over DIDComm, with issuer and subject both did:web.)
+- **Delivery is store-and-forward + mediated.** Archon provides a DIDComm mailbox (store-and-forward) and full
+  mediator/routing (Coordinate-Mediation, Forward). An agent that is offline or lacks a public endpoint still
+  receives challenges and credentials via its inbox / a mediator — the realistic agent-to-agent delivery
+  substrate for the anchor flow (present → verify), where the "verifier" may reach an agent that is not a live
+  HTTP endpoint.
+- **Consequence for Sigil.** The DIDComm present-proof profile is largely *naming*, not building: issue → deliver
+  → accept, even to a foreign agent, is already carried by Archon's Issue-Credential + mailbox + universal-resolver
+  rails. Sigil supplies the credential content and the presentation semantics.
+
+### Key-type interop — the one real constraint
+Resolution, envelope, transport, and delivery to a `did:web` agent work; whether a *given* foreign agent's keys
+verify end-to-end depends on its key types. Archon today verifies `ES256K` signatures and derives X25519 for key
+agreement; foreign **signing** interop needs `EdDSA` verification, and some ecosystems use **P-256** key agreement
+— both flagged as open in Archon's DIDComm design (confirm current status before relying on it). This lands in
+Sigil two ways:
+1. **A trust-level factor.** A presentation whose key types Archon can fully verify rates higher than one it
+   cannot. The presentation model should surface "cryptographically verified vs. merely asserted" per foreign key
+   type rather than fail opaquely — consistent with *identity is proven by a signature, not by transport*.
+2. **A contribution back.** Closing the `EdDSA` / `P-256` gaps in Archon directly serves Sigil's cross-method reach
+   and the CG's interop/post-quantum line — a clean first upstream contribution.
+
+## 6. Recommendation for Sigil
 
 1. **Canonical presentation = Archon's native challenge/response VP.** Make holder-binding (proof-of-possession
    bound to the nonce + audience) mandatory; bare bearer is allowed only at the lowest trust level.
@@ -125,14 +156,15 @@ projection (Archon `credentials[]` → `dcql_query.credentials[]`; nonce/domain 
    reach + selective disclosure.
 3. **Profile onto existing protocols; invent none:**
    - **OID4VP (DCQL)** → the primary profile: bridges OAuth, **MCP**, **A2A**, browsers.
-   - **DIDComm present-proof** → the DID-native, direct agent-to-agent profile (Archon-native).
+   - **DIDComm present-proof** → the DID-native, direct agent-to-agent profile (Archon-native, and method-agnostic
+     — carries non-native `did:web` agents first-class; see §5).
    - **SPIFFE** → not a presentation profile but an **attestation input** grounding the agent's runtime + the
      controller binding (SPIFFE: "what workload is this"; Sigil: "what agent/authority is this" — they compose).
 4. **Sigil's genuinely new work narrows to** the agent-credential *semantics* (agent ↔ controller ↔ scope) and the
    **trust-level definitions** — for which Archon's three challenge types (identity-only → credential →
    issuer-pinned) are a ready seed.
 
-## 6. Open questions → next steps
+## 7. Open questions → next steps
 - **Scope in the query vs. at the verifier.** Does slice one need claim-level scope matching in the challenge
   (extend `Challenge` via its open shape), or is verifier-side scope evaluation of the presented credential
   enough? (Likely the latter for the anchor.)
@@ -143,3 +175,6 @@ projection (Archon `credentials[]` → `dcql_query.credentials[]`; nonce/domain 
   (this note fixes the top-level mapping; the leaf syntax is the build-time detail).
 - **Confirm the on-the-wire Archon VP encoding** (JSON-LD proof suite, canonicalization) against the Keymaster
   implementation before asserting `ldp_vc` equivalence in a profile.
+- **Foreign key-type interop status (§5).** Confirm the current state of `EdDSA` signature verification and
+  `P-256` key agreement in Archon — it decides which non-native agents verify end-to-end today, feeds the
+  trust-level model, and scopes a candidate upstream contribution.
