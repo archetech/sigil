@@ -45,3 +45,4 @@ whenever any layer changes. It is how an auditor answers *"why does this functio
 |---|---|---|---|
 | [`sigil-v0-requirements.md`](sigil-v0-requirements.md) | `R` | — | Actors, principles, use-cases, foundational requirements |
 | [`agent-credential.md`](agent-credential.md) | `AC` | [`docs/agent-credential.md`](../docs/agent-credential.md) | The Agent Authorization Credential (agent ↔ controller ↔ scope) |
+| [`delegation-chain.md`](delegation-chain.md) | `DC` | [`docs/delegation-chain.md`](../docs/delegation-chain.md) | Offline multi-hop delegation chain proof |
