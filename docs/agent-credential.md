@@ -160,3 +160,18 @@ new structure — only chain-walking at verification (§6.7).
   the verifier from what it can check? (Leaning derived, to avoid a self-asserted trust level.)
 - **Schema registration.** Register the AAC type as an Archon schema (a schema DID) so challenges can name it in
   `credentials[].schema`.
+
+## Traceability
+
+Design points (convention: [`traceability.md`](traceability.md)); each realizes the requirement(s) after the arrow:
+
+- `[D-AAC-1 → AC-1, AC-2]` §1 — two distinct bindings (issuer signature = control; holder proof = identity); the credential is **not bearer**.
+- `[D-AAC-2 → AC-3]` §2, §3.2 — issuer = the controlling entity (the control binding).
+- `[D-AAC-3 → AC-4, AC-6]` §2 — structured, attenuable `authorization` (actions / resources / constraints incl. `audience`).
+- `[D-AAC-4 → AC-7]` §2, §6 — short validity + fail-closed revocation status.
+- `[D-AAC-5 → AC-9]` §2, §4 — method-agnostic subject / controller / issuer (`did:web` first-class).
+- `[D-AAC-6 → AC-10]` §5 — assurance-level ladder, derived from what was proved.
+- `[D-AAC-7 → AC-5]` §3.3, §6.4 — authorization verified at the point of use.
+- `[D-AAC-8 → AC-11]` §5 — proof-of-human step-up for high-consequence actions.
+- `[D-AAC-9 → AC-12]` §6 — deny with minimal disclosure.
+- `[D-AAC-10 → AC-8]` §7 — delegation by monotonic attenuation; chain-walk verification.

@@ -34,6 +34,11 @@ foundational requirement (R*)  ←  feature requirement (XX-*)  ←  design note
 A change at any layer is traceable up (to the need it serves) and down (to what verifies it). **When a design
 note is written or changed, its requirements document MUST be updated in the same change** so the two never drift.
 
+The full four-layer discipline — design points (`D-*`), code `@implements` tags, and test `@verifies` tags — is
+specified in [`../docs/traceability.md`](../docs/traceability.md). The rolled-up matrix and gap report are
+**generated** into [`../TRACEABILITY.md`](../TRACEABILITY.md) by `node tools/trace/build-traceability.mjs`; run it
+whenever any layer changes. It is how an auditor answers *"why does this function exist?"* from a single tag.
+
 ## Index
 
 | Requirements | Prefix | Design note | Covers |

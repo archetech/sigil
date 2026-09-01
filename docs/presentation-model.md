@@ -178,3 +178,13 @@ Sigil two ways:
 - **Foreign key-type interop status (§5).** Confirm the current state of `EdDSA` signature verification and
   `P-256` key agreement in Archon — it decides which non-native agents verify end-to-end today, feeds the
   trust-level model, and scopes a candidate upstream contribution.
+
+## Traceability
+
+Design points (convention: [`traceability.md`](traceability.md)); these realize foundational requirements (`R*`):
+
+- `[D-PM-1 → R2, R7]` §3 — Archon's challenge/response is a native W3C VerifiablePresentation (holder-binding + credential presentation + audience + issuer requirements in one exchange); the canonical model.
+- `[D-PM-2 → R14]` §4, §6 — profile onto OID4VP (DCQL) + DIDComm present-proof; do not reinvent presentation.
+- `[D-PM-3 → R1, R3]` §5 — method-agnostic issuance/presentation (non-native `did:web` agents first-class).
+- `[D-PM-4 → R16]` §5 — foreign key-type interop as a trust-level factor.
+- `[D-PM-5 → R14]` §6 — SPIFFE as an attestation input, not a presentation profile.
