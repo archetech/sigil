@@ -31,6 +31,14 @@ issued by a party other than the parent's subject, or delegated from a non-deleg
 · **Verify:** a hop whose issuer is not the parent's subject is denied; delegating from a capability with
 `delegable: false` is denied.
 
+**DC-5** — For each hop the verifier MUST verify the issuer's signature against the issuer's key state **as of when
+the hop was signed** (resolving the delegator DID at the hop's signing version — `versionTime` / `versionId`), so
+a later key rotation does not invalidate a validly-signed past delegation. Revocation, by contrast, MUST be checked
+at the **current** version (a `delete` seen by replay ⇒ deny).
+· Actor: Verifier · Traces: R8, P5 · docs §2 · [`archon-substrate.md`](../docs/archon-substrate.md)
+· **Verify:** a delegation signed before its delegator rotated keys still verifies; a `delete` on that delegator's
+credential denies the chain currently.
+
 ---
 
 *Open (design §5): chain-length bounds, cross-method signature interop along a chain, the ordered-chain
