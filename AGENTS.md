@@ -55,4 +55,8 @@ rely on session memory for process corrections.** (Contributors should also read
 Record process corrections and non-obvious gotchas here — dated — so they survive across sessions and
 contributors.
 
-- _(none yet — add as we learn.)_
+- **2026-09-01 — Verify a merge landed *before* running post-merge cleanup; never chain them.** `gh pr merge`
+  can return a transient `mergeable=UNKNOWN` and fail, but a `git checkout main` / branch-delete chained in the
+  *same* step then runs anyway and reverts the working tree to the pre-merge state. Poll mergeability first if it
+  is `UNKNOWN`, confirm the merge actually landed, *then* clean up as a separate step. (Work was recovered from
+  `origin`; nothing was lost — but the scare was self-inflicted by chaining.)
