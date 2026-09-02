@@ -12,6 +12,23 @@ Every ecosystem the W3C Agent Identity CG lists (MCP, A2A, OAuth/OIDC, SPIFFE) h
 This note asks whether there is a common pattern to adopt, and how Archon's native challenge/response maps onto
 the industry-standard expression of it.
 
+The single-hop exchange, end to end:
+
+```mermaid
+sequenceDiagram
+    participant A as Agent (holder)
+    participant V as Verifier
+    participant GK as Gatekeeper
+
+    V->>A: challenge (nonce, audience)
+    A->>A: sign {holder, challenge, audience}
+    A->>V: presentation — AAC + holder proof
+    V->>GK: resolve agent, VRC, AAC (replay)
+    GK-->>V: DID documents (or deactivated)
+    Note over V: holder binding · control via VRC ·<br/>revocation · scope for THIS action
+    V-->>A: accept (with assurance) / deny
+```
+
 ## 2. Three paradigms, not five protocols
 
 The listed technologies reduce to three presentation shapes:

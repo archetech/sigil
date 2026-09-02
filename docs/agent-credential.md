@@ -25,6 +25,23 @@ Two distinct proofs bind it, and they must not be conflated:
   verifier's nonce (the challenge/response of [`presentation-model.md`](presentation-model.md)). The credential is
   **not bearer**: holding the bytes is not enough.
 
+The AAC does not assert control itself — it **references** a DTG VRC that does, so relationship and capability keep
+their own lifecycles:
+
+```mermaid
+flowchart LR
+    CTRL["Controller DID<br/>(issuer)"]
+    VRC["VRC — DTG relationship<br/>controller ↔ agent"]
+    AAC["AAC — capability<br/>actions · resources · constraints"]
+    AGENT["Agent DID<br/>(holder)"]
+
+    CTRL -->|signs| VRC
+    CTRL -->|signs| AAC
+    VRC -->|binds| AGENT
+    AAC -.->|"references (credentialSubject.relationship)"| VRC
+    AAC -->|authorizes| AGENT
+```
+
 ## 2. Structure
 
 A concrete `ldp_vc` (JSON-LD, W3C VCDM 2.0) example — the encoding that maps directly to Archon's native VP:

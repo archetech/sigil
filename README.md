@@ -10,6 +10,22 @@ with a signature, not a pre-existing bilateral agreement.
 The work is aligned to the W3C [Agent Identity Community Group](https://www.w3.org/community/agent-identity/) and
 to the growing demand for verifiable agent-to-agent (A2A) exchange.
 
+## At a glance
+
+Three actors, and trust that rests on signatures — not on a bilateral agreement set up in advance:
+
+```mermaid
+flowchart TD
+    C["Controller<br/>the principal behind the agent"]
+    A["Agent<br/>acts in the world, holds a scoped grant"]
+    V["Verifier<br/>a third party, no prior relationship"]
+
+    C -->|"VRC — 'this agent is mine'"| A
+    C -->|"AAC — scoped, revocable authority"| A
+    A -->|"presents the AAC, proves it controls the key"| V
+    V -->|"accept / deny — from signatures alone"| A
+```
+
 ## Status
 
 **v0 — the anchor use-case is implemented and verified end-to-end against a live Archon node.**
@@ -42,6 +58,18 @@ each signature is verified point-in-time against the signer's key state when it 
 ## How it's built
 
 Two seams, injected, so the logic is testable without a live node and the trust surface is minimal:
+
+```mermaid
+flowchart LR
+    VP["verifyPresentation<br/>keyless · deny-by-default"]
+    R["Resolver seam"]
+    S["SignatureVerifier seam"]
+    GK["Gatekeeper<br/>resolution = operation-log replay"]
+    CI["@didcid/cipher<br/>JCS + ECDSA secp256k1"]
+
+    VP --> R --> GK
+    VP --> S --> CI
+```
 
 - **The verifier is keyless.** `verifyPresentation` ([`src/verify.ts`](src/verify.ts)) crosses a deny-by-default
   ladder using only two public dependencies — DID resolution and signature checking:
