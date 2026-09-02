@@ -13,6 +13,7 @@
  * @implements R2, AC-3
  */
 import type { Jwk, Proof, SignatureVerifier } from '../types.ts';
+import { base64urlToHex } from '../base64url.ts';
 
 /** The two cipher calls this adapter needs. A `@didcid/cipher` instance (`new CipherNode()`) satisfies it. */
 export interface ArchonCipher {
@@ -27,7 +28,7 @@ export function createArchonSignatureVerifier(cipher: ArchonCipher): SignatureVe
     async verify(signed: unknown, proof: Proof, key: Jwk): Promise<boolean> {
       try {
         const msgHash = cipher.hashJSON(signed);
-        const sigHex = Buffer.from(proof.proofValue, 'base64url').toString('hex');
+        const sigHex = base64urlToHex(proof.proofValue);
         return cipher.verifySig(msgHash, sigHex, key);
       } catch {
         return false; // malformed proof / key → fail-closed
