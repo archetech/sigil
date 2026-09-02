@@ -20,6 +20,7 @@ export type {
   Capability,
   AAC,
   VRC,
+  CoSign,
   Presentation,
   VerifyRequest,
   VerifyResult,

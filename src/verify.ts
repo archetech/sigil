@@ -8,7 +8,7 @@
  * the signature primitive is behind `SignatureVerifier`. The logic here is what Sigil owns; the crypto and the
  * substrate are injected.
  */
-import type { AAC, VRC, Jwk, Proof, Presentation, VerifyRequest, VerifyDeps, VerifyResult } from './types.ts';
+import type { AAC, VRC, Jwk, Proof, CoSign, Presentation, VerifyRequest, VerifyDeps, VerifyResult } from './types.ts';
 import { attenuates } from './capability.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
@@ -28,6 +28,11 @@ function holderSignedData(p: Presentation): unknown {
 }
 /** The object a credential's issuer signs — the credential without its `proof`. */
 function credentialBody(c: AAC | VRC): unknown {
+  const { proof: _proof, ...rest } = c;
+  return rest;
+}
+/** The object a co-signer signs — the request binding, without the proof. */
+function coSignBody(c: CoSign): unknown {
   const { proof: _proof, ...rest } = c;
   return rest;
 }
@@ -79,7 +84,7 @@ async function verifyRoot(root: AAC, deps: VerifyDeps): Promise<VerifyResult> {
  * Verify a present-and-verify over a complete ordered delegation chain. Returns `{ ok: true, assuranceLevel }` or a
  * denial whose `reason` is a check-class label only (never the subject or full scope) — minimal disclosure.
  *
- * @implements AC-1, AC-2, AC-5, AC-6, AC-7, AC-8, AC-9, AC-12, DC-1, DC-2, DC-3, DC-4, DC-5
+ * @implements AC-1, AC-2, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, DC-1, DC-2, DC-3, DC-4, DC-5
  */
 export async function verifyPresentation(p: Presentation, req: VerifyRequest, deps: VerifyDeps): Promise<VerifyResult> {
   const now = req.now ?? new Date().toISOString();
@@ -141,7 +146,20 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
   if (cap.constraints?.notAfter && now > cap.constraints.notAfter) return deny('constraint-expired');
 
   // Trust level — a verified chain yields at least controller-vouched; the leaf carries the effective level.
-  const level = leaf.credentialSubject.assuranceLevel ?? 'controller-vouched';
+  let level = leaf.credentialSubject.assuranceLevel ?? 'controller-vouched';
+
+  // Human step-up — for an action the verifier designates high-consequence, require a fresh proof-of-human co-sign
+  // by the accountable principal (the root's controller), bound to THIS exact request. [AC-11]
+  if (req.requireHumanCoSign) {
+    const cs = p.coSign;
+    if (!cs) return deny('co-sign-required');
+    if (cs.challenge !== req.nonce || cs.audience !== req.audience || cs.action !== req.action || cs.resource !== req.resource) return deny('co-sign-binding');
+    if (cs.authorizer !== root.issuer) return deny('co-sign-authorizer'); // only the accountable principal may co-sign
+    const key = await signerKeyAt(deps, cs.proof, cs.authorizer);
+    if (!key || !(await deps.signatures.verify(coSignBody(cs), cs.proof, key))) return deny('co-sign-invalid');
+    level = 'human-co-signed';
+  }
+
   if (req.requiredAssurance && !meetsAssurance(level, req.requiredAssurance)) return deny('assurance');
 
   return { ok: true, assuranceLevel: level };
