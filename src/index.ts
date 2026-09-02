@@ -11,6 +11,9 @@ export type { ArchonCipher } from './archon/signatures.ts';
 export { createArchonIssuer } from './archon/issuer.ts';
 export type { ArchonIssuer, Signer, PrivateJwk, IssuerGatekeeper, IssuerCipher, IssuerOptions } from './archon/issuer.ts';
 
+// The monotonic-attenuation rule (AC-8), shared by issuer and verifier.
+export { attenuates } from './capability.ts';
+
 export type {
   Jwk,
   Proof,

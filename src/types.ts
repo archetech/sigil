@@ -44,7 +44,8 @@ export interface Capability {
   readonly parent?: string | null;
 }
 
-/** Agent Authorization Credential — Sigil's capability credential; references a DTG VRC for control. */
+/** Agent Authorization Credential — Sigil's capability credential. A root AAC references a DTG VRC for control;
+ *  a delegated AAC narrows its parent (`authorization.parent`) and is issued by the parent's subject. */
 export interface AAC {
   /** The credential's own DID (the VC-DID / asset). */
   readonly id: string;
@@ -56,8 +57,9 @@ export interface AAC {
   readonly credentialSubject: {
     /** The agent DID (the holder proves control of this key). */
     readonly id: string;
-    /** The DID of the DTG VRC establishing controller ↔ agent. */
-    readonly relationship: string;
+    /** The DID of the DTG VRC establishing controller ↔ agent. Present on the **root** of a chain (which anchors
+     *  to the controller); a delegated hop has none — it is pinned to its parent by signature + `authorization.parent`. */
+    readonly relationship?: string;
     readonly authorization: Capability;
     readonly assuranceLevel?: string;
   };
@@ -83,7 +85,8 @@ export interface Presentation {
   readonly challenge: string;
   /** The verifier this presentation is bound to. */
   readonly audience: string;
-  /** The anchor is single-hop: exactly one AAC. */
+  /** The complete ordered delegation chain, root → leaf. A single-hop anchor is a chain of length 1 (root = leaf);
+   *  the presenting agent is the leaf's subject. */
   readonly credentials: readonly AAC[];
   /** Holder proof binding (holder, challenge, audience). */
   readonly proof: Proof;

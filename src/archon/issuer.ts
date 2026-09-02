@@ -14,9 +14,10 @@
  *   - `present`           — a holder-signed presentation binding {holder, challenge, audience}.
  *   - `revoke`            — a `delete` operation (irreversible), for teardown or real revocation.
  *
- * @implements R1, R3, AC-3
+ * @implements R1, R3, R6, AC-3
  */
 import type { AAC, VRC, Capability, Presentation, Proof, Jwk } from '../types.ts';
+import { attenuates } from '../capability.ts';
 
 /** A private JWK carries `d`; kept in-process, never disclosed. */
 export type PrivateJwk = Jwk & { readonly d?: string };
@@ -61,6 +62,15 @@ export interface ArchonIssuer {
     authorization: Capability,
     opts?: { validFrom?: string; validUntil?: string; assuranceLevel?: string },
   ): Promise<{ did: string; credential: AAC }>;
+  /** Mint a delegated AAC: issued by `delegator` (which must be `parent`'s subject), narrowing `parent`. Widening
+   *  or a non-delegable parent is refused here, at issuance (AC-8) — as well as at verification. */
+  mintDelegation(
+    delegator: Signer,
+    parent: AAC,
+    subject: string,
+    authorization: Capability,
+    opts?: { validFrom?: string; validUntil?: string; assuranceLevel?: string },
+  ): Promise<{ did: string; credential: AAC }>;
   present(holder: Signer, opts: { challenge: string; audience: string; credentials: readonly AAC[] }): Presentation;
   revoke(did: string, controller: Signer): Promise<boolean>;
 }
@@ -83,6 +93,25 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
     return gatekeeper.createDID(signed(op, controller.privateJwk, vm(controller.did)));
   }
 
+  /** Mint an AAC asset whose own `id` names its DID: create with a placeholder, then update to store the signed
+   *  credential (a verifier resolves the AAC's DID for revocation, so `id` must equal it — known only after create). */
+  async function mintAacAsset(signer: Signer, buildBody: (did: string) => object): Promise<{ did: string; credential: AAC }> {
+    const did = await createAsset(signer, { pending: true });
+    const credential = signed(buildBody(did), signer.privateJwk, vm(signer.did)) as AAC;
+    const current = await gatekeeper.resolveDID(did);
+    const doc: Record<string, unknown> = { ...current, didDocumentData: credential };
+    delete doc.didDocumentMetadata;
+    delete doc.didResolutionMetadata;
+    const updateOp = { type: 'update', did, previd: current.didDocumentMetadata?.versionId, blockid: await blockid(), doc };
+    await gatekeeper.updateDID(signed(updateOp, signer.privateJwk, vm(signer.did)));
+    return { did, credential };
+  }
+  const aacBase = (did: string, issuer: string, opts: { validFrom?: string; validUntil?: string }) => ({
+    id: did, type: ['VerifiableCredential', 'AgentAuthorizationCredential'], issuer,
+    validFrom: opts.validFrom ?? now(), validUntil: opts.validUntil ?? '2099-01-01T00:00:00Z',
+  });
+  const withAssurance = (level?: string) => (level ? { assuranceLevel: level } : {});
+
   return {
     async mintAgent() {
       const { publicJwk, privateJwk } = cipher.generateRandomJwk();
@@ -103,25 +132,22 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
     },
 
     async mintAuthorization(controller, subject, relationshipDid, authorization, opts = {}) {
-      // The AAC's `id` must equal its own DID (a verifier resolves it for revocation), which is only known after
-      // creation — so create with a placeholder, then update to store the signed AAC that names its own DID.
-      const did = await createAsset(controller, { pending: true });
-      const credential = signed(
-        {
-          id: did, type: ['VerifiableCredential', 'AgentAuthorizationCredential'], issuer: controller.did,
-          validFrom: opts.validFrom ?? now(), validUntil: opts.validUntil ?? '2099-01-01T00:00:00Z',
-          credentialSubject: { id: subject, relationship: relationshipDid, authorization, ...(opts.assuranceLevel ? { assuranceLevel: opts.assuranceLevel } : {}) },
-        },
-        controller.privateJwk, vm(controller.did),
-      ) as AAC;
+      // A root AAC: it references the establishing VRC and carries no `parent`.
+      return mintAacAsset(controller, (did) => ({
+        ...aacBase(did, controller.did, opts),
+        credentialSubject: { id: subject, relationship: relationshipDid, authorization, ...withAssurance(opts.assuranceLevel) },
+      }));
+    },
 
-      const current = await gatekeeper.resolveDID(did);
-      const doc: Record<string, unknown> = { ...current, didDocumentData: credential };
-      delete doc.didDocumentMetadata;
-      delete doc.didResolutionMetadata;
-      const updateOp = { type: 'update', did, previd: current.didDocumentMetadata?.versionId, blockid: await blockid(), doc };
-      await gatekeeper.updateDID(signed(updateOp, controller.privateJwk, vm(controller.did)));
-      return { did, credential };
+    async mintDelegation(delegator, parent, subject, authorization, opts = {}) {
+      const parentCap = parent.credentialSubject.authorization;
+      if (parentCap.delegable !== true) throw new Error('mintDelegation: parent capability is not delegable');
+      if (!attenuates(authorization, parentCap)) throw new Error('mintDelegation: authorization widens its parent');
+      // A delegated AAC: issued by the delegator (the parent's subject), pinned to the parent, no VRC of its own.
+      return mintAacAsset(delegator, (did) => ({
+        ...aacBase(did, delegator.did, opts),
+        credentialSubject: { id: subject, authorization: { ...authorization, parent: parent.id }, ...withAssurance(opts.assuranceLevel) },
+      }));
     },
 
     present(holder, { challenge, audience, credentials }) {

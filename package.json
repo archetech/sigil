@@ -13,7 +13,8 @@
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "test:coverage": "node --experimental-strip-types --test --experimental-test-coverage test/*.test.ts",
     "e2e:archon": "node --experimental-strip-types scripts/e2e-archon-resolve.ts",
-    "e2e:prove": "node --experimental-strip-types scripts/e2e-archon-prove.ts"
+    "e2e:prove": "node --experimental-strip-types scripts/e2e-archon-prove.ts",
+    "e2e:delegate": "node --experimental-strip-types scripts/e2e-archon-delegate.ts"
   },
   "devDependencies": {
     "@types/node": "^22",

@@ -11,44 +11,14 @@ import assert from 'node:assert/strict';
 import Cipher from '@didcid/cipher';
 
 import { verifyPresentation, createArchonIssuer, createArchonResolver, createArchonSignatureVerifier } from '../src/index.ts';
-import type { Jwk } from '../src/index.ts';
+import { makeFakeGatekeeper } from './fake-gatekeeper.ts';
 
 const cipher = new Cipher();
-
-/** A minimal in-memory gatekeeper: content-addresses DIDs (hashJSON), applies updates, marks deletes. */
-function fakeGatekeeper() {
-  type Entry = { type: 'agent' | 'asset'; publicJwk?: Jwk; data?: unknown; deactivated: boolean; versionId: string };
-  const store = new Map<string, Entry>();
-  let seq = 0;
-  return {
-    async getBlock() { return null; },
-    async createDID(op: any): Promise<string> {
-      const did = `did:cid:test${cipher.hashJSON(op).slice(0, 44)}`;
-      store.set(did, { type: op.registration.type, publicJwk: op.publicJwk, data: op.data, deactivated: false, versionId: `v${++seq}` });
-      return did;
-    },
-    async updateDID(op: any): Promise<boolean> {
-      const e = store.get(op.did); if (!e) return false;
-      e.data = op.doc?.didDocumentData; e.versionId = `v${++seq}`; return true;
-    },
-    async deleteDID(op: any): Promise<boolean> {
-      const e = store.get(op.did); if (!e) return false;
-      e.deactivated = true; e.versionId = `v${++seq}`; return true;
-    },
-    async resolveDID(did: string): Promise<any> {
-      const e = store.get(did);
-      if (!e) return { didResolutionMetadata: { error: 'invalidDid' }, didDocument: {}, didDocumentMetadata: {} };
-      const didDocumentMetadata = { deactivated: e.deactivated, versionId: e.versionId };
-      if (e.type === 'agent') return { didDocument: { verificationMethod: [{ id: '#key-1', publicKeyJwk: e.publicJwk }] }, didDocumentMetadata };
-      return { didDocumentData: e.deactivated ? undefined : e.data, didDocumentMetadata };
-    },
-  };
-}
 
 const AUTH = { actions: ['invoke:catalog.search'], resources: ['res:catalog'], constraints: { audience: ['did:web:vendor.example'] } };
 
 async function mintWorld() {
-  const gk = fakeGatekeeper();
+  const gk = makeFakeGatekeeper(cipher);
   const issuer = createArchonIssuer(gk, cipher, { registry: 'test' });
   const deps = { resolver: createArchonResolver(gk), signatures: createArchonSignatureVerifier(cipher) };
 
