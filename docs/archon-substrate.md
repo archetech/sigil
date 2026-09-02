@@ -18,6 +18,18 @@ prior one by `previd`. There are exactly three:
 The DID identifier is `did:cid:<cid>`, where `<cid>` is the **CIDv1-base32 of the JCS-canonicalized create seed** —
 so the identifier is a content hash of its own genesis (the anchor).
 
+There is no stored document: resolution **replays** the log to derive current state, and a `delete` makes every
+future resolution deny.
+
+```mermaid
+flowchart LR
+    create["create<br/>anchors the DID"] --> update["update<br/>evolve the document"] --> del["delete<br/>revoke · irreversible"]
+    create -.-> replay["resolve = replay the log"]
+    update -.-> replay
+    del -.-> replay
+    replay --> out["current state<br/>(or deactivated: true → deny)"]
+```
+
 ## Objects — agents sign, assets hold
 
 - **Agent** — has `verificationMethod` (keys), `authentication`, `assertionMethod`. Agents *sign* operations and
