@@ -146,8 +146,8 @@ function render(): void {
       <h2>3 · The delegation chain</h2>
       ${engine.chain.length === 0
         ? `<p class="muted">Nothing issued yet.</p>`
-        : `<div class="hops">${engine.chain.map(hopCard).join('<span class="arrow">→</span>')}</div>
-           <p class="hint">The verifier walks this <strong>root → leaf</strong> from the presented credentials alone — no delegator is contacted.</p>`}
+        : `<div class="diagramwrap">${chainDiagram()}</div>
+           <p class="hint">Authority flows left → right, only narrowing. The verifier walks it <strong>root → leaf</strong> from the presented credentials alone — no delegator is contacted.</p>`}
     </section>
 
     <section class="card verify">
@@ -180,14 +180,51 @@ function actorRow(a: { name: string; role: string; did: string }): string {
     <span class="name">${esc(a.name)}</span><code class="did">${esc(short(a.did))}</code></li>`;
 }
 
-function hopCard(h: { issuerId: string; subjectId: string; cap: Capability; revoked: boolean }, i: number): string {
-  const issuer = engine.actor(h.issuerId), subject = engine.actor(h.subjectId);
-  return `<div class="hop ${h.revoked ? 'revoked' : ''}">
-    <div class="hoptop"><span class="tier">${i === 0 ? 'root' : `hop ${i}`}</span>
-      ${h.revoked ? '<span class="revtag">revoked</span>' : `<button data-action="revoke:${i}" class="revoke" title="Revoke this hop">revoke</button>`}</div>
-    <div class="edge">${esc(issuer.name)} <span class="to">→</span> ${esc(subject.name)}</div>
-    <div class="chips">${capChips(h.cap)}</div>
-  </div>`;
+/** A dynamic SVG diagram of the chain: actor nodes left→right, the VRC anchoring the root, scope on each hop
+ *  (shrinking as it narrows), revoked hops in red, the leaf as the presenter (tinted by the last verify). */
+function chainDiagram(): string {
+  const chain = engine.chain;
+  const nodes = chain.length + 1;
+  const PAD = 14, NODE_W = 120, NODE_H = 50, EDGE = 148, STEP = NODE_W + EDGE;
+  const NODE_Y = 60, NODE_CY = NODE_Y + NODE_H / 2, LABEL_Y = 2, LABEL_H = 54, VRC_Y = 126, HEIGHT = 176;
+  const WIDTH = PAD * 2 + nodes * NODE_W + (nodes - 1) * EDGE;
+  const nodeX = (i: number) => PAD + i * STEP;
+  const actorAt = (i: number) => (i === 0 ? engine.actor(engine.controllerId) : engine.actor(chain[i - 1]!.subjectId));
+  const xn = 'xmlns="http://www.w3.org/1999/xhtml"';
+
+  let g = '';
+  for (let i = 0; i < nodes; i++) {
+    const a = actorAt(i);
+    const isLeaf = i === nodes - 1;
+    const tint = isLeaf && lastVerify ? (lastVerify.result.ok ? 'ok' : 'deny') : '';
+    g += `<foreignObject x="${nodeX(i)}" y="${NODE_Y}" width="${NODE_W}" height="${NODE_H}">
+      <div ${xn} class="node ${a.role} ${isLeaf ? 'leaf' : ''} ${tint}">
+        <span class="nrole">${a.role === 'controller' ? 'controller' : isLeaf ? 'presenter' : 'agent'}</span>
+        <span class="nname">${esc(a.name)}</span>
+      </div></foreignObject>`;
+  }
+  for (let k = 0; k < chain.length; k++) {
+    const h = chain[k]!;
+    const x1 = nodeX(k) + NODE_W, x2 = nodeX(k + 1);
+    const rev = h.revoked ? 'revoked' : '';
+    g += `<line x1="${x1}" y1="${NODE_CY}" x2="${x2}" y2="${NODE_CY}" class="wire ${rev}" marker-end="url(#${h.revoked ? 'arrowRev' : 'arrow'})"/>`;
+    g += `<foreignObject x="${x1 + 4}" y="${LABEL_Y}" width="${EDGE - 8}" height="${LABEL_H}">
+      <div ${xn} class="elabel">
+        <span class="tier">${k === 0 ? 'root grant' : `delegation ${k}`}</span>
+        <div class="echips">${capChips(h.cap)}</div>
+        ${h.revoked ? '<span class="revtag">revoked</span>' : `<button data-action="revoke:${k}" class="erevoke">revoke</button>`}
+      </div></foreignObject>`;
+  }
+  const midX = nodeX(0) + NODE_W + EDGE / 2;
+  g += `<line x1="${midX}" y1="${NODE_CY}" x2="${midX}" y2="${VRC_Y}" class="anchor"/>
+    <foreignObject x="${midX - 56}" y="${VRC_Y}" width="112" height="36"><div ${xn} class="vrc">VRC · control edge</div></foreignObject>`;
+
+  return `<svg viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}" class="diagram" role="img" aria-label="delegation chain">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker>
+      <marker id="arrowRev" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah rev"/></marker>
+    </defs>${g}
+  </svg>`;
 }
 
 function resultBanner(r: VerifyResult): string {

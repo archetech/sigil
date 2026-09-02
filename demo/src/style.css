@@ -108,18 +108,30 @@ input[type="text"] { font-family: var(--mono); font-size: .82rem; min-width: 15r
 .box.off { opacity: .4; cursor: not-allowed; }
 .box input { accent-color: var(--accent); }
 
-.hops { display: flex; align-items: stretch; gap: .2rem; flex-wrap: wrap; margin: .6rem 0; }
-.hop { flex: 1 1 190px; min-width: 175px; border: 1px solid var(--border); border-radius: 11px; padding: .7rem .8rem; background: var(--surface-2); display: flex; flex-direction: column; gap: .45rem; }
-.hop.revoked { opacity: .55; border-style: dashed; }
-.hoptop { display: flex; justify-content: space-between; align-items: center; }
 .tier { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 700; }
-.revtag { font-size: .7rem; color: var(--deny); font-weight: 600; }
-.revoke { font-size: .72rem; background: none; border: none; color: var(--deny); text-decoration: underline; text-underline-offset: 2px; padding: 0; }
-.edge { font-weight: 600; font-size: .9rem; }
-.edge .to { color: var(--muted); margin: 0 .15rem; }
-.arrow { align-self: center; color: var(--muted); font-size: 1.3rem; padding: 0 .1rem; }
-.chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.revtag { font-size: .68rem; color: var(--deny); font-weight: 600; }
 .chip { font-size: .72rem; font-family: var(--mono); padding: .12rem .45rem; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); }
+
+/* dynamic chain diagram (SVG canvas + foreignObject HTML nodes) */
+.diagramwrap { overflow-x: auto; margin: .5rem 0 .2rem; padding-bottom: .3rem; }
+.diagram { display: block; max-width: none; }
+.diagram .wire { stroke: var(--muted); stroke-width: 1.6; }
+.diagram .wire.revoked { stroke: var(--deny); stroke-dasharray: 5 3; }
+.diagram .anchor { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.diagram .ah { fill: var(--muted); }
+.diagram .ah.rev { fill: var(--deny); }
+.node { height: 50px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-align: center; }
+.node.controller { border-color: var(--accent); background: var(--accent-soft); }
+.node.leaf { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent); }
+.node.leaf.ok { box-shadow: 0 0 0 2px var(--ok); }
+.node.leaf.deny { box-shadow: 0 0 0 2px var(--deny); }
+.node .nrole { font-size: .56rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.node .nname { font-size: .84rem; font-weight: 600; line-height: 1.1; }
+.elabel { display: flex; flex-direction: column; align-items: center; gap: 2px; height: 100%; justify-content: flex-start; }
+.echips { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
+.echips .chip { font-size: .58rem; padding: .02rem .3rem; }
+.erevoke { font-size: .58rem; background: none; border: none; color: var(--deny); text-decoration: underline; text-underline-offset: 2px; padding: 0; cursor: pointer; }
+.vrc { font-size: .62rem; text-align: center; color: var(--accent); border: 1px dashed var(--accent); border-radius: 8px; padding: .18rem; background: var(--surface); }
 .chip.act { color: var(--act); border-color: color-mix(in srgb, var(--act) 30%, var(--border)); }
 .chip.res { color: var(--res); border-color: color-mix(in srgb, var(--res) 30%, var(--border)); }
 .chip.deleg { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
