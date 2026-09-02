@@ -141,4 +141,19 @@ input[type="text"] { font-family: var(--mono); font-size: .82rem; min-width: 15r
 
 .foot { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.2rem clamp(1rem, 4vw, 3rem); color: var(--muted); font-size: .8rem; border-top: 1px solid var(--border); }
 
+.trace { margin: .6rem 0; padding: .8rem 1rem; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); }
+.tracehead { font-size: .88rem; margin-bottom: .3rem; }
+.tracehead .zero { color: var(--ok); font-weight: 600; }
+.trace ol { margin: .3rem 0 .5rem; padding-left: 1.4rem; display: flex; flex-direction: column; gap: .22rem; }
+.trace li { font-size: .82rem; }
+.trace .who { font-weight: 600; }
+.purpose { font-size: .68rem; font-family: var(--mono); padding: .05rem .4rem; border-radius: 5px; margin-left: .3rem; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+.purpose.key { color: var(--act); }
+.purpose.status { color: var(--deny); }
+.purpose.liveness { color: var(--res); }
+.trace .hint { margin: .3rem 0 0; }
+
+.jsonwrap { margin-top: .4rem; }
+.json { font-family: var(--mono); font-size: .74rem; line-height: 1.45; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: .8rem; overflow: auto; max-height: 340px; margin: .4rem 0 0; white-space: pre; }
+
 @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .topbar { flex-direction: column; } .mode { align-items: flex-start; } }

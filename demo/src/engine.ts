@@ -4,7 +4,7 @@
  * here re-implements Sigil; the UI just orchestrates the same calls the tests and live e2e scripts make.
  */
 import { verifyPresentation, createArchonIssuer, createArchonResolver, createArchonSignatureVerifier } from '@sigil';
-import type { AAC, Capability, Signer, VerifyResult, VerifyRequest, ArchonIssuer, Resolver, SignatureVerifier } from '@sigil';
+import type { AAC, Capability, Signer, VerifyResult, VerifyRequest, ArchonIssuer, Resolver, SignatureVerifier, Presentation } from '@sigil';
 import Cipher from '@didcid/cipher';
 import { makeOfflineGatekeeper, makeLiveGatekeeper } from './gatekeeper.ts';
 
@@ -15,6 +15,10 @@ export const RESOURCES = ['res:catalog', 'res:orders', 'res:billing'] as const;
 
 export interface Actor { id: string; name: string; role: 'controller' | 'agent'; did: string; signer: Signer; }
 export interface Hop { did: string; credential: AAC; issuerId: string; subjectId: string; cap: Capability; revoked: boolean; }
+
+/** One resolution the verifier performed — captured to show that verification is read-only DID/status resolution. */
+export interface TraceEntry { did: string; label: string; purpose: 'key' | 'liveness' | 'status'; }
+export interface VerifyOutcome { result: VerifyResult; trace: TraceEntry[]; presentation: Presentation; }
 
 export class DemoEngine {
   mode: Mode = 'offline';
@@ -28,6 +32,7 @@ export class DemoEngine {
   actors: Actor[] = [];
   controllerId = '';
   chain: Hop[] = [];
+  rootVrcDid = '';
   private agentCount = 0;
 
   constructor() { this.wire(makeOfflineGatekeeper(this.cipher)); }
@@ -38,7 +43,17 @@ export class DemoEngine {
     this.deps = { resolver: createArchonResolver(gk), signatures: createArchonSignatureVerifier(this.cipher) };
   }
 
-  reset(): void { this.actors = []; this.controllerId = ''; this.chain = []; this.agentCount = 0; }
+  reset(): void { this.actors = []; this.controllerId = ''; this.chain = []; this.rootVrcDid = ''; this.agentCount = 0; }
+
+  /** A friendly name for a DID seen in a verification trace. */
+  private didLabel(did: string): string {
+    const a = this.actors.find((x) => x.did === did);
+    if (a) return a.name;
+    const idx = this.chain.findIndex((h) => h.did === did);
+    if (idx >= 0) return idx === 0 ? 'root grant (AAC)' : `delegation ${idx} (AAC)`;
+    if (did === this.rootVrcDid) return 'relationship (VRC)';
+    return did.length > 22 ? `${did.slice(0, 15)}…` : did;
+  }
 
   async setOffline(): Promise<void> {
     this.mode = 'offline'; this.liveError = null; this.reset(); this.wire(makeOfflineGatekeeper(this.cipher));
@@ -76,6 +91,7 @@ export class DemoEngine {
     const controller = await this.ensureController();
     const subject = this.actor(subjectId);
     const vrc = await this.issuer.mintRelationship(controller.signer, subject.did);
+    this.rootVrcDid = vrc.did;
     const root = await this.issuer.mintAuthorization(controller.signer, subject.did, vrc.did, cap, { assuranceLevel: 'controller-vouched' });
     this.chain = [{ did: root.did, credential: root.credential, issuerId: controller.id, subjectId, cap, revoked: false }];
   }
@@ -94,11 +110,23 @@ export class DemoEngine {
     hop.revoked = true;
   }
 
-  async verify(action: string, resource: string, audience: string): Promise<VerifyResult> {
+  async verify(action: string, resource: string, audience: string): Promise<VerifyOutcome> {
     const presenter = this.leafSubject(); if (!presenter) throw new Error('nothing to present');
     const nonce = crypto.randomUUID();
-    const pres = this.issuer.present(presenter.signer, { challenge: nonce, audience, credentials: this.chain.map((h) => h.credential) });
+    const presentation = this.issuer.present(presenter.signer, { challenge: nonce, audience, credentials: this.chain.map((h) => h.credential) });
     const req: VerifyRequest = { nonce, audience, action, resource };
-    return verifyPresentation(pres, req, this.deps);
+
+    // Wrap the resolver to capture every lookup the verifier makes — proving verification is read-only DID/status
+    // resolution, and no delegator is contacted for approval (R8).
+    const trace: TraceEntry[] = [];
+    const tracing: Resolver = {
+      resolve: async (did, opts) => {
+        const isAgent = this.actors.some((a) => a.did === did);
+        trace.push({ did, label: this.didLabel(did), purpose: opts?.versionTime ? 'key' : isAgent ? 'liveness' : 'status' });
+        return this.deps.resolver.resolve(did, opts);
+      },
+    };
+    const result = await verifyPresentation(presentation, req, { resolver: tracing, signatures: this.deps.signatures });
+    return { result, trace, presentation };
   }
 }
