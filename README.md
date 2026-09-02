@@ -28,13 +28,15 @@ flowchart TD
 
 ## Status
 
-**v0 — the anchor use-case is implemented and verified end-to-end against a live Archon node.**
+**v0 — present-and-verify and multi-hop delegation are implemented and verified end-to-end against a live Archon
+node.**
 
 The anchor is **present-and-verify**: an agent, with no prior relationship to the verifier, proves its identity,
 the entity that controls it, and that a **specific** action is in scope — and the verifier accepts or denies from
-signatures and DID resolution alone. It is a single vertical slice (single-hop, no delegation chain yet), traced
-Requirement → Design → Code → Test in [`TRACEABILITY.md`](TRACEABILITY.md). Delegation chains (multi-hop, attenuated
-capabilities) and human step-up are the next slices.
+signatures and DID resolution alone. **Delegation** extends this to a **multi-hop attenuated chain**: authority is
+passed agent→agent by signed, narrowing grants, and the verifier walks the whole chain root→leaf **without
+contacting any delegator** — the object-capability property. Both are traced Requirement → Design → Code → Test in
+[`TRACEABILITY.md`](TRACEABILITY.md). Human step-up (Signet co-sign) is the next slice.
 
 New here? Read [`Requirements/sigil-v0-requirements.md`](Requirements/sigil-v0-requirements.md) for the thesis,
 scope, actor model, and design principles; then [`docs/`](docs) for the design.
@@ -50,6 +52,9 @@ standing permission. Three layers:
   not the verifier's word. See [`docs/aac-dtg-reconciliation.md`](docs/aac-dtg-reconciliation.md).
 - **Authorization** — a Sigil **Agent Authorization Credential (AAC)**: a capability credential referencing that
   VRC, carrying the scoped, attenuable, revocable authority. See [`docs/agent-credential.md`](docs/agent-credential.md).
+- **Delegation** — authority passes agent→agent as a **multi-hop chain** of AACs that only *narrow* (monotonic
+  attenuation); the verifier walks it root→leaf offline, contacting no delegator. See
+  [`docs/delegation-chain.md`](docs/delegation-chain.md).
 
 Everything rests on the Archon substrate — resolution is operation-log **replay**, revocation is a `delete`, and
 each signature is verified point-in-time against the signer's key state when it signed. See
@@ -105,6 +110,9 @@ SIGIL_GATEKEEPER_URL=<url> npm run e2e:archon -- did:cid:...
 
 # the whole anchor, live: mint → present → verify → out-of-scope deny → revoke → teardown
 SIGIL_GATEKEEPER_URL=<url> npm run e2e:prove
+
+# a multi-hop delegation chain, live: mint controller→a0→a1→a2 → present → walk root→leaf → teardown
+SIGIL_GATEKEEPER_URL=<url> npm run e2e:delegate
 ```
 
 ## Repository layout
@@ -113,13 +121,14 @@ SIGIL_GATEKEEPER_URL=<url> npm run e2e:prove
 src/
   index.ts            public surface
   types.ts            AAC / VRC / Presentation / the Resolver + SignatureVerifier seams
-  verify.ts           verifyPresentation — the anchor logic (keyless)
+  verify.ts           verifyPresentation — the chain-walking verifier (keyless)
+  capability.ts       attenuates — the monotonic-attenuation rule (AC-8), shared by issuer + verifier
   archon/
     resolver.ts       createArchonResolver        — gatekeeper resolution (replay, point-in-time)
     signatures.ts     createArchonSignatureVerifier — @didcid/cipher (JCS + ECDSA secp256k1)
-    issuer.ts         createArchonIssuer          — self-custodied mint / present / revoke
-test/                 node:test — verify (fakes), archon (real crypto), issuer (round-trip)
-scripts/              e2e-archon-resolve.ts · e2e-archon-prove.ts (opt-in, live node)
+    issuer.ts         createArchonIssuer          — self-custodied mint / delegate / present / revoke
+test/                 node:test — verify · archon (real crypto) · issuer · delegation (round-trips)
+scripts/              e2e-archon-resolve.ts · e2e-archon-prove.ts · e2e-archon-delegate.ts (opt-in, live node)
 docs/                 substrate, presentation, agent-credential, DTG reconciliation, delegation, vocabulary, …
 Requirements/         actor-first requirements (start with sigil-v0-requirements.md)
 tools/trace/          the traceability-matrix generator

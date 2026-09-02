@@ -10,9 +10,18 @@ Builds on the capability model in [`agent-credential.md`](agent-credential.md) a
 Authority flows from a controller to a leaf agent through zero or more delegations, each a capability that *only
 narrows*:
 
-```
-  Controller ──issues──▶ AAC_root ──delegates──▶ AAC_1 ──▶ … ──▶ AAC_leaf
-  (anchored to a VRC)                                            (held by the presenting agent)
+```mermaid
+flowchart LR
+    VRC[["VRC — control edge"]]
+    CTRL["Controller"] -->|"issues"| ROOT["AAC_root<br/>parent: null"]
+    ROOT -->|"delegates (⊇)"| D1["AAC_1<br/>issuer = root's subject"]
+    D1 -->|"delegates (⊇)"| DOTS["…"]
+    DOTS -->|"delegates (⊇)"| LEAF["AAC_leaf<br/>held by the presenter"]
+    ROOT -.->|references| VRC
+    CTRL -.->|controls| VRC
+
+    checks["verifier walks root → leaf, offline:<br/>anchor (VRC) · holder-binds leaf · per hop:<br/>signature @ signing-version · linkage · delegable · ⊆ · status"]
+    LEAF -.-> checks
 ```
 
 Each hop is an **AAC** (no new credential type — delegation reuses the capability credential):
