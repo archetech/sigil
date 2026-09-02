@@ -87,6 +87,22 @@ surface and is what lets a verifier run offline against cached resolutions.
 Per-signature keys are resolved point-in-time at `proof.created` (`versionTime`), so a later key rotation or `delete`
 does not retroactively invalidate a proof that was valid when signed; liveness/revocation is resolved at *now*.
 
+## The issuer / holder seam
+
+Minting the credentials the verifier consumes needs signing, so it is a separate seam — `createArchonIssuer`
+([`src/archon/issuer.ts`](../src/archon/issuer.ts)). It mirrors Sigil's object-capability ethos: the issuer holds
+its **own** keys (`@didcid/cipher`) and submits create/update/delete **operations** straight to the gatekeeper —
+no keymaster/wallet. An agent, a controller, and each credential is a DID this process builds and signs itself:
+
+- `mintAgent` — a self-custodied agent DID (a `create` operation carrying `publicJwk`, self-signed).
+- `mintRelationship` — a DTG VRC as a controller-signed **asset** (the control edge).
+- `mintAuthorization` — an AAC as a controller-signed asset. Because a credential's DID content-addresses its data,
+  the AAC's own `id` can only equal its DID *after* creation — the one place a create-then-update backfill is
+  unavoidable.
+- `present` / `revoke` — a holder-signed presentation; a `delete` operation (irreversible).
+
+`npm run e2e:prove` runs the whole loop — mint → present → `verifyPresentation` → revoke — against a live node.
+
 ## Traceability
 
 - `[D-AS-1 → AC-7]` — revocation is the `delete` operation (deactivated, irreversible, seen by replay, fail-closed);
