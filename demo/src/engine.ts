@@ -9,10 +9,11 @@ import Cipher from '@didcid/cipher';
 import { makeOfflineGatekeeper, makeLiveGatekeeper } from './gatekeeper.ts';
 
 export type Mode = 'offline' | 'live';
-export const AUDIENCE = 'did:web:acme-vendor.example';
-export const ACTIONS = ['read', 'write', 'delete', 'admin'] as const;
-export const RESOURCES = ['res:catalog', 'res:orders', 'res:billing'] as const;
-/** Actions the verifier treats as high-consequence — they require a human co-sign (AC-11). */
+/** The relying party — a third party that is itself a stranger to every agent in the chain. */
+export const AUDIENCE = 'did:web:verifier.example';
+export const ACTIONS = ['read', 'write', 'deploy', 'delete', 'admin'] as const;
+export const RESOURCES = ['repo:core', 'svc:api', 'infra:prod'] as const;
+/** Actions the verifier treats as high-consequence — they require a principal co-sign (AC-11). */
 export const HIGH_CONSEQUENCE = new Set(['delete', 'admin']);
 export const isHighConsequence = (action: string): boolean => HIGH_CONSEQUENCE.has(action);
 
@@ -26,7 +27,9 @@ function randomNonce(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export interface Actor { id: string; name: string; role: 'controller' | 'agent'; did: string; signer: Signer; }
+export interface Actor { id: string; name: string; role: 'controller' | 'agent'; org: string; did: string; signer: Signer; }
+const GREEK = ['α', 'β', 'γ', 'δ', 'ε', 'ζ'];
+const ORGS = ['Org A', 'Org B', 'Org C', 'Org D', 'Org E', 'Org F'];
 export interface Hop { did: string; credential: AAC; issuerId: string; subjectId: string; cap: Capability; revoked: boolean; }
 
 /** One resolution the verifier performed — captured to show that verification is read-only DID/status resolution. */
@@ -90,13 +93,14 @@ export class DemoEngine {
   async ensureController(): Promise<Actor> {
     if (this.controllerId) return this.actor(this.controllerId);
     const signer = await this.issuer.mintAgent();
-    const a: Actor = { id: 'controller', name: 'Acme Corp', role: 'controller', did: signer.did, signer };
+    const a: Actor = { id: 'controller', name: 'Principal', role: 'controller', org: ORGS[0]!, did: signer.did, signer };
     this.actors.push(a); this.controllerId = a.id; return a;
   }
   async addAgent(): Promise<Actor> {
+    const i = this.agentCount++;
     const signer = await this.issuer.mintAgent();
-    const letter = String.fromCharCode(65 + this.agentCount++); // A, B, C, …
-    const a: Actor = { id: `agent-${letter}`, name: `Agent ${letter}`, role: 'agent', did: signer.did, signer };
+    // First agent belongs to the principal's org; later ones are from other orgs (strangers collaborating).
+    const a: Actor = { id: `agent-${GREEK[i] ?? i}`, name: `Agent ${GREEK[i] ?? i + 1}`, role: 'agent', org: ORGS[i] ?? `Org ${i + 1}`, did: signer.did, signer };
     this.actors.push(a); return a;
   }
 

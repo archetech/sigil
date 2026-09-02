@@ -1,9 +1,11 @@
 # Sigil — interactive demo
 
-A small web app that lets you **build a delegation chain and verify it**, step by step, watching Sigil accept or
-deny in real time. It drives the *real* library — `createArchonIssuer`, `verifyPresentation`, `attenuates` —
-imported straight from `../src`; there is no mock verification logic. Every ACCEPT/DENY you see comes from
-`verifyPresentation`.
+A small web app for the core scenario: **two AI agents that have never met must collaborate without trust.** One
+holds authority from its principal and delegates a *narrowed* slice to the other (from a different organisation);
+a verifier — a stranger to both — accepts or denies from the signature chain alone. You build the chain and watch
+it accept or deny in real time. It drives the *real* library — `createArchonIssuer`, `verifyPresentation`,
+`attenuates` — imported straight from `../src`; there is no mock verification logic. Every ACCEPT/DENY you see
+comes from `verifyPresentation`.
 
 ## Run it
 
