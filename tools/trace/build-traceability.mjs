@@ -39,7 +39,9 @@ const IMPL_TAG = /@implements\s+([A-Za-z0-9,\s-]+)/g;
 const VERIFY_TAG = /@verifies\s+([A-Za-z0-9,\s-]+)/g;
 const isFoundational = (id) => /^R\d+$/.test(id);
 const isFeature = (id) => /^[A-Z]{2,}-\d+$/.test(id);
-const idList = (s) => s.split(',').map((x) => x.trim()).filter((x) => /^(R\d+|D-[A-Z]+-\d+|[A-Z]{2,}-\d+)$/.test(x));
+// Split on commas OR whitespace, so a tag whose greedy match crossed a newline into the next word (e.g.
+// `@verifies AC-12\ntest(...)`) still yields clean IDs — the stray word is filtered out below.
+const idList = (s) => s.split(/[\s,]+/).map((x) => x.trim()).filter((x) => /^(R\d+|D-[A-Z]+-\d+|[A-Z]{2,}-\d+)$/.test(x));
 
 const requirements = new Map(); // id -> { file }
 const realizes = new Map();     // featureId -> [foundationalId]  (feature realizes these foundational reqs)
