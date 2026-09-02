@@ -16,6 +16,16 @@ export const RESOURCES = ['res:catalog', 'res:orders', 'res:billing'] as const;
 export const HIGH_CONSEQUENCE = new Set(['delete', 'admin']);
 export const isHighConsequence = (action: string): boolean => HIGH_CONSEQUENCE.has(action);
 
+/** A random nonce that works in any browsing context — `crypto.getRandomValues` is available over plain HTTP on a
+ *  LAN IP, unlike `crypto.randomUUID`, which is gated to secure contexts (HTTPS / localhost). */
+function randomNonce(): string {
+  const bytes = new Uint8Array(16);
+  const c = (globalThis as { crypto?: Crypto }).crypto;
+  if (c?.getRandomValues) c.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export interface Actor { id: string; name: string; role: 'controller' | 'agent'; did: string; signer: Signer; }
 export interface Hop { did: string; credential: AAC; issuerId: string; subjectId: string; cap: Capability; revoked: boolean; }
 
@@ -116,7 +126,7 @@ export class DemoEngine {
   async verify(action: string, resource: string, audience: string, opts: { coSign?: boolean } = {}): Promise<VerifyOutcome> {
     const presenter = this.leafSubject(); if (!presenter) throw new Error('nothing to present');
     const high = isHighConsequence(action);
-    const nonce = crypto.randomUUID();
+    const nonce = randomNonce();
     let presentation = this.issuer.present(presenter.signer, { challenge: nonce, audience, credentials: this.chain.map((h) => h.credential) });
     // High-consequence + the human approves → the accountable principal (root controller) freshly co-signs.
     if (high && opts.coSign) {
