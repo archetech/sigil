@@ -115,6 +115,16 @@ SIGIL_GATEKEEPER_URL=<url> npm run e2e:prove
 SIGIL_GATEKEEPER_URL=<url> npm run e2e:delegate
 ```
 
+## Interactive demo
+
+[`demo/`](demo) is a small web app to **build a delegation chain and verify it** step by step, watching Sigil
+accept or deny in real time. It drives the *real* library (`createArchonIssuer`, `verifyPresentation`) — no mock
+logic — offline in your browser by default, or against a live node. See [`demo/README.md`](demo/README.md).
+
+```bash
+cd demo && npm install && npm run dev
+```
+
 ## Repository layout
 
 ```
@@ -130,6 +140,7 @@ src/
 test/                 node:test — verify · archon (real crypto) · issuer · delegation (round-trips)
 scripts/              e2e-archon-resolve.ts · e2e-archon-prove.ts · e2e-archon-delegate.ts (opt-in, live node)
 docs/                 substrate, presentation, agent-credential, DTG reconciliation, delegation, vocabulary, …
+demo/                 interactive web app (Vite) — build a chain and verify it, offline or live
 Requirements/         actor-first requirements (start with sigil-v0-requirements.md)
 tools/trace/          the traceability-matrix generator
 TRACEABILITY.md       generated Requirement → Design → Code → Test matrix

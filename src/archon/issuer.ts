@@ -18,6 +18,7 @@
  */
 import type { AAC, VRC, Capability, Presentation, Proof, Jwk } from '../types.ts';
 import { attenuates } from '../capability.ts';
+import { hexToBase64url } from '../base64url.ts';
 
 /** A private JWK carries `d`; kept in-process, never disclosed. */
 export type PrivateJwk = Jwk & { readonly d?: string };
@@ -79,7 +80,7 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
   const registry = options.registry ?? 'hyperswarm';
   const now = options.now ?? (() => new Date().toISOString());
   const blockid = async (): Promise<string | undefined> => (await gatekeeper.getBlock(registry))?.hash;
-  const toB64Url = (hex: string): string => Buffer.from(hex, 'hex').toString('base64url');
+  const toB64Url = hexToBase64url;
 
   /** Attach an `EcdsaSecp256k1Signature2019` proof over the JCS hash of `obj` (which must exclude any proof). */
   function signed<T extends object>(obj: T, privateJwk: PrivateJwk, verificationMethod: string): T & { proof: Proof } {
