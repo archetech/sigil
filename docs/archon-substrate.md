@@ -64,6 +64,29 @@ Every Sigil credential — the **AAC**, and the DTG **VRC / VPC / VWC / VEC** �
 `delete`, and disclosed under the holder's manifest control. Nothing in Sigil's model requires a primitive Archon
 does not already provide.
 
+## Live adapters — what the verifier actually depends on
+
+The reference verifier ([`src/verify.ts`](../src/verify.ts)) reaches Archon through two injected seams, each with
+a live adapter:
+
+- **Resolution** → `createArchonResolver` ([`src/archon/resolver.ts`](../src/archon/resolver.ts)) wraps an Archon
+  **gatekeeper** (`@didcid/clients` `GatekeeperClient`, or any `resolveDID(did, {versionTime|versionId})`). It maps a
+  replayed `DidCidDocument` to the substrate model: verification methods → an agent's keys; `didDocumentData` → an
+  asset's held credential; `didDocumentMetadata.deactivated` → revoked. A throw becomes `undefined` (fail-closed).
+- **Signature verification** → `createArchonSignatureVerifier` ([`src/archon/signatures.ts`](../src/archon/signatures.ts))
+  wraps **`@didcid/cipher`**: the canonical bytes are `hashJSON` = SHA-256 of the JCS (RFC 8785) canonicalization of
+  the proof-less object, and the check is ECDSA secp256k1 over `proofValue` (base64url of the compact-hex signature) —
+  the exact `EcdsaSecp256k1Signature2019` suite the substrate signs with, reused rather than re-implemented.
+
+**The verifier is keyless by construction.** Both dependencies are public: resolution needs no secret, and verification
+uses only the signer's *public* key (from the resolved DID document). A verifier therefore **never uses a keymaster** —
+a keymaster is the wallet, needed only on the seams that hold secrets (an issuer minting an AAC, a holder signing a
+presentation, a controller issuing a `delete` to revoke). Keeping the wallet off the verifier is the smaller trust
+surface and is what lets a verifier run offline against cached resolutions.
+
+Per-signature keys are resolved point-in-time at `proof.created` (`versionTime`), so a later key rotation or `delete`
+does not retroactively invalidate a proof that was valid when signed; liveness/revocation is resolved at *now*.
+
 ## Traceability
 
 - `[D-AS-1 → AC-7]` — revocation is the `delete` operation (deactivated, irreversible, seen by replay, fail-closed);

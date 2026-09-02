@@ -16,5 +16,9 @@
   "devDependencies": {
     "@types/node": "^22",
     "typescript": "^5.6"
+  },
+  "dependencies": {
+    "@didcid/cipher": "^0.4.3",
+    "@didcid/clients": "^0.1.3"
   }
 }

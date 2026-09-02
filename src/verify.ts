@@ -6,7 +6,7 @@
  * seam; the signature primitive is behind `SignatureVerifier`. The logic here is what Sigil owns; the crypto and
  * the substrate are injected.
  */
-import type { AAC, VRC, Presentation, VerifyRequest, VerifyDeps, VerifyResult } from './types.ts';
+import type { AAC, VRC, Jwk, Proof, Presentation, VerifyRequest, VerifyDeps, VerifyResult } from './types.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
 
@@ -18,15 +18,30 @@ function meetsAssurance(actual: string, required: string): boolean {
   return a >= 0 && r >= 0 && a >= r;
 }
 
-/** Bytes a holder signs to bind a presentation to the challenge + audience.
- *  NOTE: a production build MUST canonicalize (JCS) as the substrate does; JSON.stringify suffices for the seam. */
-function holderSignedData(p: Presentation): string {
-  return JSON.stringify({ holder: p.holder, challenge: p.challenge, audience: p.audience });
+/** The object a holder signs to bind a presentation to the challenge + audience. The `SignatureVerifier`
+ *  canonicalizes it (JCS) as the substrate does — this returns the object, not pre-serialized bytes. */
+function holderSignedData(p: Presentation): unknown {
+  return { holder: p.holder, challenge: p.challenge, audience: p.audience };
 }
-/** Bytes a credential's issuer signs — the credential without its proof. */
-function credentialSignedData(c: AAC | VRC): string {
+/** The object a credential's issuer signs — the credential without its `proof`. */
+function credentialBody(c: AAC | VRC): unknown {
   const { proof: _proof, ...rest } = c;
-  return JSON.stringify(rest);
+  return rest;
+}
+
+/**
+ * Resolve the key a proof was made with, at the signer's key-state *when the proof was created*
+ * (`versionTime: proof.created`) — Archon verifies each signature point-in-time, so a later key rotation
+ * or a `delete` does not retroactively invalidate a proof that was valid when signed. The signer DID is
+ * derived from `verificationMethod` and MUST equal the principal we expect to have signed (`expectedSigner`),
+ * closing the "sign with my own key while claiming to be the issuer" substitution.
+ */
+async function signerKeyAt(deps: VerifyDeps, proof: Proof, expectedSigner: string): Promise<Jwk | undefined> {
+  const [signerDid] = proof.verificationMethod.split('#');
+  if (signerDid !== expectedSigner) return undefined;
+  const resolved = await deps.resolver.resolve(signerDid, { versionTime: proof.created });
+  if (!resolved || resolved.kind !== 'agent' || !resolved.keys) return undefined;
+  return resolved.keys[proof.verificationMethod];
 }
 
 /**
@@ -43,13 +58,12 @@ async function verifyRelationship(aac: AAC, deps: VerifyDeps): Promise<VerifyRes
   // The AAC issuer must be a party to the relationship — at the anchor (root) it is the controller.
   if (aac.issuer !== vrc.issuer) return deny('issuer-not-party');
 
-  const controller = await deps.resolver.resolve(vrc.issuer);
-  if (!controller || controller.deactivated || !controller.keys) return deny('controller-unresolvable');
-  const relKey = controller.keys[vrc.proof.verificationMethod];
-  if (!relKey || !(await deps.signatures.verify(credentialSignedData(vrc), vrc.proof, relKey))) return deny('relationship-signature');
+  // The relationship edge is signed by the controller, verified at its own signing time.
+  const relKey = await signerKeyAt(deps, vrc.proof, vrc.issuer);
+  if (!relKey || !(await deps.signatures.verify(credentialBody(vrc), vrc.proof, relKey))) return deny('relationship-signature');
   // The capability grant itself is signed by the same controller.
-  const grantKey = controller.keys[aac.proof.verificationMethod];
-  if (!grantKey || !(await deps.signatures.verify(credentialSignedData(aac), aac.proof, grantKey))) return deny('issuer-signature');
+  const grantKey = await signerKeyAt(deps, aac.proof, aac.issuer);
+  if (!grantKey || !(await deps.signatures.verify(credentialBody(aac), aac.proof, grantKey))) return deny('issuer-signature');
 
   return { ok: true };
 }
@@ -73,9 +87,9 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
 
   // Holder binding — the presenter controls the agent DID's key, proven against the challenge. Not bearer.
   if (p.holder !== aac.credentialSubject.id) return deny('holder-mismatch');
-  const agent = await deps.resolver.resolve(p.holder);
-  if (!agent || agent.deactivated || !agent.keys) return deny('holder-unresolvable'); // fail-closed
-  const holderKey = agent.keys[p.proof.verificationMethod];
+  const agent = await deps.resolver.resolve(p.holder); // liveness is resolved at *now* (revocation is current)
+  if (!agent || agent.deactivated || agent.kind !== 'agent') return deny('holder-unresolvable'); // fail-closed
+  const holderKey = await signerKeyAt(deps, p.proof, p.holder); // key state at signing time
   if (!holderKey || !(await deps.signatures.verify(holderSignedData(p), p.proof, holderKey))) return deny('holder-binding');
 
   // Control — established by the referenced DTG VRC.
