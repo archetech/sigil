@@ -4,39 +4,39 @@
 
 Chain: **foundational R\* ← feature XX-\* ← design D-\* ← code (@implements) ← test (@verifies)**.
 Foundational `R*` inherit coverage from the feature requirements that realize them ("via").
-34 requirements · 24 design points · 0 tagged code files · 0 tagged test files.
+34 requirements · 24 design points · 1 tagged code files · 1 tagged test files.
 
 | Requirement | Realized by | Design | Code | Tests | Status |
 |---|---|---|---|---|---|
-| R1 | AC-1, AC-9 | D-PM-3, D-AAC-1, D-AAC-5 | — | — | D:✓ C:· T:· |
-| R2 | AC-1, AC-2 | D-PM-1, D-AAC-1 | — | — | D:✓ C:· T:· |
-| R3 | AC-3, AC-9, DC-3 | D-PM-3, D-AAC-11, D-AAC-2, D-AAC-5, D-DC-3 | — | — | D:✓ C:· T:· |
-| R4 | AC-3 | D-AAC-11, D-AAC-2 | — | — | D:✓ C:· T:· |
+| R1 | AC-1, AC-9 | D-PM-3, D-AAC-1, D-AAC-5 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R2 | AC-1, AC-2 | D-PM-1, D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R3 | AC-3, AC-9, DC-3 | D-PM-3, D-AAC-11, D-AAC-2, D-AAC-5, D-DC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R4 | AC-3 | D-AAC-11, D-AAC-2 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R5 | AC-4 | D-AAC-3 | — | — | D:✓ C:· T:· |
 | R6 | AC-8, DC-4 | D-DC-4, D-AAC-10 | — | — | D:✓ C:· T:· |
-| R7 | AC-5, AC-6 | D-PM-1, D-AAC-7, D-AAC-3 | — | — | D:✓ C:· T:· |
+| R7 | AC-5, AC-6 | D-PM-1, D-AAC-7, D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R8 | DC-1, DC-2, DC-5 | D-AS-2, D-AS-3, D-DC-1, D-DC-5, D-DC-2 | — | — | D:✓ C:· T:· |
-| R9 | AC-13, AC-7, AC-8 | D-AAC-11, D-AAC-4, D-AS-1, D-AAC-10 | — | — | D:✓ C:· T:· |
-| R10 | AC-13, AC-7 | D-AAC-11, D-AAC-4, D-AS-1 | — | — | D:✓ C:· T:· |
-| R11 | AC-12 | D-AAC-9 | — | — | D:✓ C:· T:· |
-| R12 | AC-12 | D-AAC-9 | — | — | D:✓ C:· T:· |
+| R9 | AC-13, AC-7, AC-8 | D-AAC-11, D-AAC-4, D-AS-1, D-AAC-10 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R10 | AC-13, AC-7 | D-AAC-11, D-AAC-4, D-AS-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R11 | AC-12 | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R12 | AC-12 | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R13 | AC-11 | D-AAC-8 | — | — | D:✓ C:· T:· |
 | R14 | — | D-PM-2, D-PM-5 | — | — | D:✓ C:· T:· |
-| R15 | AC-6 | D-AAC-3 | — | — | D:✓ C:· T:· |
+| R15 | AC-6 | D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R16 | AC-10 | D-PM-4, D-AAC-6 | — | — | D:✓ C:· T:· |
-| AC-1 | — | D-AAC-1 | — | — | D:✓ C:· T:· |
-| AC-2 | — | D-AAC-1 | — | — | D:✓ C:· T:· |
-| AC-3 | — | D-AAC-11, D-AAC-2 | — | — | D:✓ C:· T:· |
+| AC-1 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| AC-2 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| AC-3 | — | D-AAC-11, D-AAC-2 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-4 | — | D-AAC-3 | — | — | D:✓ C:· T:· |
-| AC-5 | — | D-AAC-7 | — | — | D:✓ C:· T:· |
-| AC-6 | — | D-AAC-3 | — | — | D:✓ C:· T:· |
-| AC-7 | — | D-AAC-4, D-AS-1 | — | — | D:✓ C:· T:· |
+| AC-5 | — | D-AAC-7 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| AC-6 | — | D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| AC-7 | — | D-AAC-4, D-AS-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-8 | — | D-AAC-10 | — | — | D:✓ C:· T:· |
-| AC-9 | — | D-AAC-5 | — | — | D:✓ C:· T:· |
+| AC-9 | — | D-AAC-5 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-10 | — | D-AAC-6 | — | — | D:✓ C:· T:· |
 | AC-11 | — | D-AAC-8 | — | — | D:✓ C:· T:· |
-| AC-12 | — | D-AAC-9 | — | — | D:✓ C:· T:· |
-| AC-13 | — | D-AAC-11 | — | — | D:✓ C:· T:· |
+| AC-12 | — | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
+| AC-13 | — | D-AAC-11 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | DC-1 | — | D-DC-1 | — | — | D:✓ C:· T:· |
 | DC-2 | — | D-DC-2 | — | — | D:✓ C:· T:· |
 | DC-3 | — | D-DC-3 | — | — | D:✓ C:· T:· |
@@ -46,5 +46,5 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 ## Gaps
 
 - **No design coverage:** none
-- **No code (pending implementation):** R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13, DC-1, DC-2, DC-3, DC-4, DC-5
-- **No test (pending unit/e2e):** R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13, DC-1, DC-2, DC-3, DC-4, DC-5
+- **No code (pending implementation):** R5, R6, R8, R13, R14, R16, AC-4, AC-8, AC-10, AC-11, DC-1, DC-2, DC-3, DC-4, DC-5
+- **No test (pending unit/e2e):** R5, R6, R8, R13, R14, R16, AC-4, AC-8, AC-10, AC-11, DC-1, DC-2, DC-3, DC-4, DC-5
