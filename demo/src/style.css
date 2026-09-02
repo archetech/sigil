@@ -85,7 +85,9 @@ code { font-family: var(--mono); font-size: .86em; }
 .role.controller { background: var(--accent-soft); color: var(--accent); }
 .role.agent { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
 .actor .name { font-weight: 600; }
+.actor .org { font-size: .68rem; color: var(--muted); padding: .1rem .4rem; border: 1px solid var(--border); border-radius: 999px; }
 .did { color: var(--muted); margin-left: auto; }
+.node .norg { font-size: .56rem; color: var(--muted); }
 
 button { font-family: var(--sans); cursor: pointer; }
 button.primary { background: var(--accent); color: #fff; border: none; border-radius: 9px; padding: .6rem 1.1rem; font-weight: 600; font-size: .9rem; margin-top: .3rem; }

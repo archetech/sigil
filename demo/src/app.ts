@@ -63,7 +63,7 @@ function capEditor(prefix: string, parent?: Capability): string {
     return `<label class="box ${disabled ? 'off' : ''}"><input type="checkbox" data-cap="${prefix}-action" value="${a}" ${on && !disabled ? 'checked' : ''} ${disabled ? 'disabled' : ''}/> ${a}</label>`;
   }).join('');
   const resBoxes = RESOURCES.map((r) => {
-    const on = parent ? parent.resources.includes(r) : r === 'res:catalog' || r === 'res:orders';
+    const on = parent ? parent.resources.includes(r) : r === 'repo:core' || r === 'svc:api';
     const disabled = parent && !parent.resources.includes(r);
     return `<label class="box ${disabled ? 'off' : ''}"><input type="checkbox" data-cap="${prefix}-resource" value="${r}" ${on && !disabled ? 'checked' : ''} ${disabled ? 'disabled' : ''}/> ${r.replace('res:', '')}</label>`;
   }).join('');
@@ -118,13 +118,13 @@ function render(): void {
   <main class="grid ${busy ? 'busy' : ''}">
     <section class="card cast">
       <h2>1 · Cast</h2>
-      <p class="hint">A principal and its agents. Each is its own <code>did:cid</code>, minted just now.</p>
+      <p class="hint">A principal and agents from independent organisations — strangers that don't trust each other a priori. Each is its own <code>did:cid</code>, minted just now.</p>
       <ul class="actors">
         ${controller ? actorRow(controller) : `<li class="muted">No controller yet — issue a grant to create one.</li>`}
         ${agents.map(actorRow).join('') || (controller ? '' : '')}
       </ul>
       <button data-action="add-agent" class="ghost">+ Add agent</button>
-      <button data-action="scenario" class="link">Load a 2-hop scenario</button>
+      <button data-action="scenario" class="link">Load a cross-org scenario</button>
     </section>
 
     <section class="card grant">
@@ -160,14 +160,14 @@ function render(): void {
       <h2>4 · Present &amp; verify</h2>
       ${engine.chain.length === 0
         ? `<p class="muted">Issue a grant first.</p>`
-        : `<p class="hint"><strong>${esc(engine.leafSubject()?.name ?? '')}</strong> presents the chain and asks to perform an action. Trust is decided from signatures + DID resolution alone.</p>
+        : `<p class="hint">The verifier has never met <strong>${esc(engine.leafSubject()?.name ?? '')}</strong>. It decides from the signature chain — rooting in the accountable principal — and DID resolution alone. No prior relationship, no shared secret.</p>
            <div class="askrow">
              <span>do</span>
              <select id="vAction">${ACTIONS.map((a) => `<option ${a === vAction ? 'selected' : ''}>${a}</option>`).join('')}</select>
              <span>on</span>
              <select id="vResource">${RESOURCES.map((r) => `<option value="${r}" ${r === vResource ? 'selected' : ''}>${r.replace('res:', '')}</option>`).join('')}</select>
              <span>for</span>
-             <select id="vAudience"><option value="${AUDIENCE}" ${vAudience === AUDIENCE ? 'selected' : ''}>the vendor</option><option value="did:web:someone-else.example" ${vAudience !== AUDIENCE ? 'selected' : ''}>a different verifier</option></select>
+             <select id="vAudience"><option value="${AUDIENCE}" ${vAudience === AUDIENCE ? 'selected' : ''}>this verifier</option><option value="did:web:other-verifier.example" ${vAudience !== AUDIENCE ? 'selected' : ''}>a different verifier</option></select>
              <button data-action="verify" class="primary">Present &amp; verify</button>
            </div>
            ${isHighConsequence(vAction)
@@ -185,9 +185,9 @@ function render(): void {
   </footer>`;
 }
 
-function actorRow(a: { name: string; role: string; did: string }): string {
-  return `<li class="actor"><span class="role ${a.role}">${a.role === 'controller' ? 'controller' : 'agent'}</span>
-    <span class="name">${esc(a.name)}</span><code class="did">${esc(short(a.did))}</code></li>`;
+function actorRow(a: { name: string; role: string; org: string; did: string }): string {
+  return `<li class="actor"><span class="role ${a.role}">${a.role === 'controller' ? 'principal' : 'agent'}</span>
+    <span class="name">${esc(a.name)}</span><span class="org">${esc(a.org)}</span><code class="did">${esc(short(a.did))}</code></li>`;
 }
 
 /** A dynamic SVG diagram of the chain: actor nodes left→right, the VRC anchoring the root, scope on each hop
@@ -195,8 +195,8 @@ function actorRow(a: { name: string; role: string; did: string }): string {
 function chainDiagram(): string {
   const chain = engine.chain;
   const nodes = chain.length + 1;
-  const PAD = 14, NODE_W = 120, NODE_H = 50, EDGE = 148, STEP = NODE_W + EDGE;
-  const NODE_Y = 60, NODE_CY = NODE_Y + NODE_H / 2, LABEL_Y = 2, LABEL_H = 54, VRC_Y = 126, HEIGHT = 176;
+  const PAD = 14, NODE_W = 120, NODE_H = 58, EDGE = 148, STEP = NODE_W + EDGE;
+  const NODE_Y = 58, NODE_CY = NODE_Y + NODE_H / 2, LABEL_Y = 2, LABEL_H = 52, VRC_Y = 130, HEIGHT = 182;
   const WIDTH = PAD * 2 + nodes * NODE_W + (nodes - 1) * EDGE;
   const nodeX = (i: number) => PAD + i * STEP;
   const actorAt = (i: number) => (i === 0 ? engine.actor(engine.controllerId) : engine.actor(chain[i - 1]!.subjectId));
@@ -209,8 +209,9 @@ function chainDiagram(): string {
     const tint = isLeaf && lastVerify ? (lastVerify.result.ok ? 'ok' : 'deny') : '';
     g += `<foreignObject x="${nodeX(i)}" y="${NODE_Y}" width="${NODE_W}" height="${NODE_H}">
       <div ${xn} class="node ${a.role} ${isLeaf ? 'leaf' : ''} ${tint}">
-        <span class="nrole">${a.role === 'controller' ? 'controller' : isLeaf ? 'presenter' : 'agent'}</span>
+        <span class="nrole">${a.role === 'controller' ? 'principal' : isLeaf ? 'presenter' : 'agent'}</span>
         <span class="nname">${esc(a.name)}</span>
+        <span class="norg">${esc(a.org)}</span>
       </div></foreignObject>`;
   }
   for (let k = 0; k < chain.length; k++) {
@@ -310,7 +311,7 @@ app.addEventListener('click', (ev) => {
       lastVerify = res; showJson = false;
       const rr = res.result;
       const cs = isHighConsequence(vAction) && coSignOn ? ' + co-sign' : '';
-      log = [{ ok: rr.ok, title: `${vAction}${cs} ${vResource.replace('res:', '')} ${vAudience === AUDIENCE ? '(vendor)' : '(other verifier)'}${rr.ok ? '' : ` — ${rr.reason}`}`, detail: rr.reason ?? '', ts: new Date().toLocaleTimeString() }, ...log].slice(0, 8);
+      log = [{ ok: rr.ok, title: `${vAction}${cs} ${vResource} ${vAudience === AUDIENCE ? '(this verifier)' : '(other verifier)'}${rr.ok ? '' : ` — ${rr.reason}`}`, detail: rr.reason ?? '', ts: new Date().toLocaleTimeString() }, ...log].slice(0, 8);
     });
   }
   if (action === 'scenario') return void run(loadScenario);
@@ -329,8 +330,9 @@ async function loadScenario(): Promise<void> {
   await engine.ensureController();
   const a = await engine.addAgent();
   await engine.addAgent();
-  await engine.issueRoot(a.id, { actions: ['read', 'write', 'delete'], resources: ['res:catalog', 'res:orders'], constraints: { audience: [AUDIENCE] }, delegable: true });
-  await engine.delegate(engine.actors.filter((x) => x.role === 'agent').at(-1)!.id, { actions: ['read', 'delete'], resources: ['res:catalog'], constraints: { audience: [AUDIENCE] }, delegable: false });
+  // Principal → Agent α (its own org): broad, delegable. α → Agent β (a different org): a narrowed slice.
+  await engine.issueRoot(a.id, { actions: ['read', 'write', 'deploy', 'delete'], resources: ['repo:core', 'svc:api'], constraints: { audience: [AUDIENCE] }, delegable: true });
+  await engine.delegate(engine.actors.filter((x) => x.role === 'agent').at(-1)!.id, { actions: ['read', 'deploy', 'delete'], resources: ['svc:api'], constraints: { audience: [AUDIENCE] }, delegable: false });
 }
 
 render();
