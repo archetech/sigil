@@ -77,6 +77,22 @@ export interface VRC {
   readonly proof: Proof;
 }
 
+/**
+ * A proof-of-human step-up: the accountable principal (the root's controller) *freshly* co-signs a specific
+ * request — bound to the challenge, audience, action, and resource, so a standing capability alone is not enough
+ * and the co-sign cannot be replayed onto a different action. The "human" property is key custody (the authorizer
+ * key is held by a human 2nd factor); the verifier requires a fresh signature by the accountable principal.
+ */
+export interface CoSign {
+  /** The co-signing DID — canonically the root's controller (the principal). */
+  readonly authorizer: string;
+  readonly challenge: string;
+  readonly audience: string;
+  readonly action: string;
+  readonly resource: string;
+  readonly proof: Proof;
+}
+
 /** A holder-bound presentation: the credential(s) + a proof of key control against the challenge. */
 export interface Presentation {
   /** The presenting agent DID. */
@@ -90,6 +106,8 @@ export interface Presentation {
   readonly credentials: readonly AAC[];
   /** Holder proof binding (holder, challenge, audience). */
   readonly proof: Proof;
+  /** Present for a high-consequence action: the principal's proof-of-human co-sign (AC-11). */
+  readonly coSign?: CoSign;
 }
 
 /** What the verifier asks, plus the specific action being authorized. */
@@ -102,6 +120,8 @@ export interface VerifyRequest {
   /** Injectable clock (ISO 8601); defaults to now. */
   readonly now?: string;
   readonly requiredAssurance?: string;
+  /** The verifier designates this action high-consequence: a valid proof-of-human co-sign is then required (AC-11). */
+  readonly requireHumanCoSign?: boolean;
 }
 
 /** A resolved DID — the result of replaying its operation log (the Archon substrate model). */

@@ -35,8 +35,9 @@ The anchor is **present-and-verify**: an agent, with no prior relationship to th
 the entity that controls it, and that a **specific** action is in scope — and the verifier accepts or denies from
 signatures and DID resolution alone. **Delegation** extends this to a **multi-hop attenuated chain**: authority is
 passed agent→agent by signed, narrowing grants, and the verifier walks the whole chain root→leaf **without
-contacting any delegator** — the object-capability property. Both are traced Requirement → Design → Code → Test in
-[`TRACEABILITY.md`](TRACEABILITY.md). Human step-up (Signet co-sign) is the next slice.
+contacting any delegator** — the object-capability property. **Human step-up** requires a fresh proof-of-human
+co-sign by the accountable principal for actions the verifier designates high-consequence (assurance
+`human-co-signed`). All are traced Requirement → Design → Code → Test in [`TRACEABILITY.md`](TRACEABILITY.md).
 
 New here? Read [`Requirements/sigil-v0-requirements.md`](Requirements/sigil-v0-requirements.md) for the thesis,
 scope, actor model, and design principles; then [`docs/`](docs) for the design.

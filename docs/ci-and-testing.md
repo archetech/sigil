@@ -30,10 +30,12 @@ Two tiers, kept separate so CI stays hermetic:
 - **Unit (`npm test`)** — offline, no network. `test/verify.test.ts` exercises the anchor logic against fakes;
   `test/archon.test.ts` exercises the live adapters against real `@didcid/cipher` crypto and stubbed gatekeeper
   documents (including the fail-closed cases a real node returns). This is the CI gate.
-- **Live (`npm run e2e:archon` / `e2e:prove` / `e2e:delegate`)** — opt-in, hits a running Archon node. `e2e:archon`
-  validates `createArchonResolver` against real operation-log replay. `e2e:prove` runs the **whole anchor** (mint a
-  controller + agent + VRC + AAC, present, verify, revoke). `e2e:delegate` runs a **multi-hop chain** (controller →
-  a0 → a1 → a2, walked root→leaf with every delegator offline). All are configured entirely by environment (see
+- **Live (`npm run e2e:archon` / `e2e:prove` / `e2e:delegate` / `e2e:stepup`)** — opt-in, hits a running Archon
+  node. `e2e:archon` validates `createArchonResolver` against real operation-log replay. `e2e:prove` runs the
+  **whole anchor** (mint a controller + agent + VRC + AAC, present, verify, revoke). `e2e:delegate` runs a
+  **multi-hop chain** (controller → a0 → a1 → a2, walked root→leaf with every delegator offline). `e2e:stepup` runs
+  **human step-up** (a high-consequence action denied without a co-sign, accepted at `human-co-signed` with the
+  principal's co-sign). All are configured entirely by environment (see
   [`../.env.example`](../.env.example)) — no hostname or secret is committed; `SIGIL_GATEKEEPER_URL` defaults to a
   public node.
 

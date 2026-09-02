@@ -146,6 +146,15 @@ Archon's three challenge types seed an assurance ladder carried in `assuranceLev
 | `issuer-pinned` | the controller is one the verifier trusts *a priori* | AAC issuer ∈ the verifier's trusted-controller set |
 | *(+ human-co-signed)* | a proof-of-human step-up co-signed the authority | AAC + a human co-sign assertion (high-consequence) |
 
+**Human step-up (AC-11).** When the verifier designates the requested action *high-consequence*, the AAC alone is
+not enough: the presentation MUST carry a **co-sign** — a fresh signature by the **accountable principal** (the
+root's controller) over the *exact* request (`{authorizer, challenge, audience, action, resource}`). Because it is
+bound to the challenge and the specific action, a standing capability cannot satisfy it and the co-sign cannot be
+replayed onto another action; it is verified point-in-time like any signature and, on success, lifts the
+presentation to `human-co-signed`. The *human* property is key custody — the authorizer key is held by a human 2nd
+factor — so the verifier requires a fresh principal signature at the point of use, not merely a prior grant. A
+distinct *designated-authorizer* DID (separate from the controller) is a future refinement.
+
 Key-type interop (`presentation-model.md` §5) modulates this: a presentation whose foreign key type Archon can
 fully verify rates higher than one it can only partially check — surfaced explicitly, never failed opaquely.
 

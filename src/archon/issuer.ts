@@ -14,9 +14,9 @@
  *   - `present`           — a holder-signed presentation binding {holder, challenge, audience}.
  *   - `revoke`            — a `delete` operation (irreversible), for teardown or real revocation.
  *
- * @implements R1, R3, R6, AC-3
+ * @implements R1, R3, R6, AC-3, AC-11
  */
-import type { AAC, VRC, Capability, Presentation, Proof, Jwk } from '../types.ts';
+import type { AAC, VRC, Capability, CoSign, Presentation, Proof, Jwk } from '../types.ts';
 import { attenuates } from '../capability.ts';
 import { hexToBase64url } from '../base64url.ts';
 
@@ -73,6 +73,8 @@ export interface ArchonIssuer {
     opts?: { validFrom?: string; validUntil?: string; assuranceLevel?: string },
   ): Promise<{ did: string; credential: AAC }>;
   present(holder: Signer, opts: { challenge: string; audience: string; credentials: readonly AAC[] }): Presentation;
+  /** The accountable principal freshly co-signs a specific high-consequence request — a proof-of-human step-up. */
+  coSign(authorizer: Signer, req: { challenge: string; audience: string; action: string; resource: string }): CoSign;
   revoke(did: string, controller: Signer): Promise<boolean>;
 }
 
@@ -154,6 +156,12 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
     present(holder, { challenge, audience, credentials }) {
       const { proof } = signed({ holder: holder.did, challenge, audience }, holder.privateJwk, vm(holder.did));
       return { holder: holder.did, challenge, audience, credentials, proof };
+    },
+
+    coSign(authorizer, { challenge, audience, action, resource }) {
+      const body = { authorizer: authorizer.did, challenge, audience, action, resource };
+      const { proof } = signed(body, authorizer.privateJwk, vm(authorizer.did));
+      return { ...body, proof };
     },
 
     async revoke(did, controller) {
