@@ -56,7 +56,12 @@ export function createArchonResolver(gatekeeper: GatekeeperLike): Resolver {
         const keys: Record<string, Jwk> = {};
         for (const vm of vms) {
           if (typeof vm.id === 'string' && vm.publicKeyJwk && typeof vm.publicKeyJwk === 'object') {
-            keys[vm.id] = vm.publicKeyJwk as Jwk;
+            const jwk = vm.publicKeyJwk as Jwk;
+            // A DID document keys its methods relatively (`#key-1`) but a proof references them absolutely
+            // (`<did>#key-1`); index under both so either form of `proof.verificationMethod` resolves.
+            keys[vm.id] = jwk;
+            const fragment = vm.id.includes('#') ? `#${vm.id.split('#')[1]}` : `#${vm.id}`;
+            keys[`${did}${fragment}`] = jwk;
           }
         }
         return { did, deactivated, kind: 'agent', keys } satisfies ResolvedDid;

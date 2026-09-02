@@ -7,6 +7,10 @@ export type { GatekeeperLike, GatekeeperDidDocument } from './archon/resolver.ts
 export { createArchonSignatureVerifier } from './archon/signatures.ts';
 export type { ArchonCipher } from './archon/signatures.ts';
 
+// Issuer / holder seam: self-custodied minting of the credentials the verifier consumes.
+export { createArchonIssuer } from './archon/issuer.ts';
+export type { ArchonIssuer, Signer, PrivateJwk, IssuerGatekeeper, IssuerCipher, IssuerOptions } from './archon/issuer.ts';
+
 export type {
   Jwk,
   Proof,
