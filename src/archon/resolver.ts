@@ -27,6 +27,8 @@ export interface GatekeeperDidDocument {
     verificationMethod?: Array<{ id?: string; publicKeyJwk?: unknown }>;
   };
   didDocumentMetadata?: { deactivated?: boolean };
+  /** Present with an `error` when the DID is malformed / not found — the gatekeeper answers 200, not a throw. */
+  didResolutionMetadata?: { error?: string };
   didDocumentData?: unknown;
 }
 
@@ -43,6 +45,9 @@ export function createArchonResolver(gatekeeper: GatekeeperLike): Resolver {
         return undefined; // unresolvable → fail-closed at the caller
       }
       if (!doc || typeof doc !== 'object') return undefined;
+      // A gatekeeper answers 200 with `didResolutionMetadata.error` (e.g. `invalidDid`, not found) for a DID it
+      // cannot resolve — never a throw. Treat any resolution error as unresolvable, fail-closed.
+      if (doc.didResolutionMetadata?.error) return undefined;
 
       const deactivated = doc.didDocumentMetadata?.deactivated === true;
       const vms = doc.didDocument?.verificationMethod ?? [];
@@ -56,7 +61,13 @@ export function createArchonResolver(gatekeeper: GatekeeperLike): Resolver {
         }
         return { did, deactivated, kind: 'agent', keys } satisfies ResolvedDid;
       }
-      return { did, deactivated, kind: 'asset', data: doc.didDocumentData } satisfies ResolvedDid;
+      if (doc.didDocumentData !== undefined && doc.didDocumentData !== null) {
+        return { did, deactivated, kind: 'asset', data: doc.didDocumentData } satisfies ResolvedDid;
+      }
+      // No keys and no data. A `delete` yields exactly this with `deactivated: true` — a real resolution the
+      // caller must see and deny. Anything else empty is an unresolvable response → fail-closed.
+      if (deactivated) return { did, deactivated: true, kind: 'asset' } satisfies ResolvedDid;
+      return undefined;
     },
   };
 }

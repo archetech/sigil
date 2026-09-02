@@ -11,7 +11,8 @@
   "scripts": {
     "typecheck": "tsc",
     "test": "node --experimental-strip-types --test test/*.test.ts",
-    "test:coverage": "node --experimental-strip-types --test --experimental-test-coverage test/*.test.ts"
+    "test:coverage": "node --experimental-strip-types --test --experimental-test-coverage test/*.test.ts",
+    "e2e:archon": "node --experimental-strip-types scripts/e2e-archon-resolve.ts"
   },
   "devDependencies": {
     "@types/node": "^22",

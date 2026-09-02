@@ -127,6 +127,21 @@ test('resolver adapter maps agent keys, asset data, and deactivation from a gate
   assert.equal((await resolver.resolve(AGENT))?.deactivated, true);
 });
 
+// @verifies R10, AC-7
+// Regression: a live gatekeeper answers 200 (never a throw) with `didResolutionMetadata.error` for a DID it
+// cannot resolve, and a `delete` yields an otherwise-empty doc with `deactivated: true`. Verified against a
+// live node in scripts/e2e-archon-resolve.ts; pinned here as a unit test.
+test('resolver adapter fails closed on an error / empty gatekeeper response', async () => {
+  const from = (d: GatekeeperDidDocument): GatekeeperLike => ({ async resolveDID() { return d; } });
+
+  // 200 + resolution error → unresolvable.
+  assert.equal(await createArchonResolver(from({ didResolutionMetadata: { error: 'invalidDid' }, didDocument: {}, didDocumentMetadata: {} })).resolve('did:cid:x'), undefined);
+  // No keys, no data, not deactivated → nothing to trust → unresolvable.
+  assert.equal(await createArchonResolver(from({ didDocument: {}, didDocumentMetadata: {} })).resolve('did:cid:x'), undefined);
+  // A `delete` IS a real resolution the caller must see and deny — not undefined.
+  assert.equal((await createArchonResolver(from({ didDocument: {}, didDocumentMetadata: { deactivated: true } })).resolve('did:cid:x'))?.deactivated, true);
+});
+
 // @verifies R2, AC-3
 test('anchor: a valid presentation verifies end-to-end over real Archon crypto', async () => {
   const { pres, req, deps } = world();

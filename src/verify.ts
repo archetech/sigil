@@ -50,8 +50,9 @@ async function signerKeyAt(deps: VerifyDeps, proof: Proof, expectedSigner: strin
  */
 async function verifyRelationship(aac: AAC, deps: VerifyDeps): Promise<VerifyResult> {
   const vrcRes = await deps.resolver.resolve(aac.credentialSubject.relationship);
-  if (!vrcRes || vrcRes.kind !== 'asset' || !vrcRes.data) return deny('relationship-unresolvable'); // fail-closed
+  if (!vrcRes) return deny('relationship-unresolvable'); // fail-closed
   if (vrcRes.deactivated) return deny('relationship-revoked'); // a `delete` on the VRC invalidates the AAC [AC-13]
+  if (vrcRes.kind !== 'asset' || !vrcRes.data) return deny('relationship-unresolvable');
   const vrc = vrcRes.data as VRC;
 
   if (vrc.credentialSubject.id !== aac.credentialSubject.id) return deny('relationship-agent-mismatch');

@@ -23,6 +23,21 @@ order Archon uses, so a change that passes locally passes in CI.
   [`../AGENTS.md`](../AGENTS.md)); this is what makes unit tests possible without standing up real services.
 - **Strict TypeScript**; `typecheck` and `lint` are gates, not suggestions.
 
+## Unit vs. live-node tests
+
+Two tiers, kept separate so CI stays hermetic:
+
+- **Unit (`npm test`)** — offline, no network. `test/verify.test.ts` exercises the anchor logic against fakes;
+  `test/archon.test.ts` exercises the live adapters against real `@didcid/cipher` crypto and stubbed gatekeeper
+  documents (including the fail-closed cases a real node returns). This is the CI gate.
+- **Live (`npm run e2e:archon`)** — opt-in, hits a running Archon node. It validates `createArchonResolver` against
+  real operation-log replay. Configure it entirely by environment (see [`../.env.example`](../.env.example)) — no
+  hostname or secret is committed; `SIGIL_GATEKEEPER_URL` defaults to a public node. Point it at your own node and,
+  optionally, pass DIDs to resolve or set `SIGIL_KEYMASTER_URL` to provision an ephemeral DID and clean it up.
+
+Running the live e2e is how we found that a gatekeeper answers `200` with `didResolutionMetadata.error` (never a
+throw) for a DID it cannot resolve — the resolver now fails closed on it, pinned by a unit regression test.
+
 ## Toolchain
 
 Pinned via [`../.nvmrc`](../.nvmrc) (and `engines` once `package.json` exists). Pin npm to match, so lockfiles
