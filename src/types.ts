@@ -7,14 +7,25 @@
  * testable without a live node.
  */
 
-/** A public JSON Web Key. */
-export type Jwk = { readonly kty: string; readonly crv?: string; readonly x?: string; readonly [k: string]: unknown };
+/** A public JSON Web Key. Archon agent keys are secp256k1 (`kty: 'EC', crv: 'secp256k1', x, y`); the
+ *  optional fields keep this compatible with both EC and OKP keys and with `@didcid/cipher`'s JWK types. */
+export type Jwk = { readonly kty: string; readonly crv?: string; readonly x?: string; readonly y?: string };
 
-/** A proof (signature) over a credential or a presentation. */
+/**
+ * A Linked-Data proof over a credential or presentation, shaped as Archon emits it
+ * (`EcdsaSecp256k1Signature2019`): the signer canonicalizes the object *without* its `proof` (JCS),
+ * hashes it, and signs. `proofValue` is the base64url of the compact-hex signature; the signer's key
+ * is resolved point-in-time at `created`.
+ */
 export interface Proof {
-  /** The verification-method id (a key) the signature is made with. */
+  readonly type: string;
+  /** ISO 8601 — also the `versionTime` the signer's key is resolved at (point-in-time verification). */
+  readonly created: string;
+  /** The verification-method id (`<did>#<fragment>`) the signature is made with. */
   readonly verificationMethod: string;
-  readonly signature: string;
+  readonly proofPurpose?: string;
+  /** base64url(compact-hex ECDSA signature). */
+  readonly proofValue: string;
   readonly [k: string]: unknown;
 }
 
@@ -74,7 +85,7 @@ export interface Presentation {
   readonly audience: string;
   /** The anchor is single-hop: exactly one AAC. */
   readonly credentials: readonly AAC[];
-  /** Holder proof over (holder, challenge, audience). */
+  /** Holder proof binding (holder, challenge, audience). */
   readonly proof: Proof;
 }
 
@@ -107,9 +118,13 @@ export interface Resolver {
   resolve(did: string, opts?: { readonly versionTime?: string; readonly versionId?: string }): Promise<ResolvedDid | undefined>;
 }
 
-/** Check a proof's signature against a key. Abstracted so the anchor logic is crypto-agnostic. */
+/**
+ * Verify `proof` over the canonical form of `signed` (the object *without* its proof) using `key`.
+ * The verifier owns canonicalization (JCS) + hashing + the signature check, so the anchor logic stays
+ * crypto-agnostic. `createArchonSignatureVerifier` (src/archon/signatures.ts) is the live implementation.
+ */
 export interface SignatureVerifier {
-  verify(signedData: string, proof: Proof, key: Jwk): Promise<boolean>;
+  verify(signed: unknown, proof: Proof, key: Jwk): Promise<boolean>;
 }
 
 export interface VerifyDeps {

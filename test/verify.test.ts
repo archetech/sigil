@@ -10,30 +10,37 @@ import { verifyPresentation } from '../src/verify.ts';
 import type { AAC, VRC, Jwk, Proof, Presentation, Resolver, ResolvedDid, SignatureVerifier, VerifyRequest } from '../src/types.ts';
 
 // ── fakes ────────────────────────────────────────────────────────────────
+// These stand in for the live Archon adapters (createArchonResolver / createArchonSignatureVerifier). They
+// model the same contract: the verifier canonicalizes the proof-less object; the resolver returns key state.
 const keyOf = (did: string): Jwk => ({ kty: 'OKP', crv: 'Ed25519', x: `x-${did}` });
 const vmOf = (did: string): string => `${did}#key-1`;
+const CREATED = '2026-05-01T00:00:00Z';
 
-/** A valid fake signature is `sig|<key.x>|<data>` — so it binds to both the signing key and the exact bytes. */
+/** A valid fake signature is `sig|<key.x>|<canonical(signed)>` — binding both the signing key and the bytes.
+ *  (JSON.stringify stands in for JCS here; both the signer and this verifier use it, so they agree.) */
 const signatures: SignatureVerifier = {
-  async verify(data, proof, key) {
-    return typeof key.x === 'string' && proof.signature === `sig|${key.x}|${data}`;
+  async verify(signed, proof, key) {
+    return typeof key.x === 'string' && proof.proofValue === `sig|${key.x}|${JSON.stringify(signed)}`;
   },
 };
-const sign = (data: string, signerDid: string): Proof => ({
+const sign = (signed: unknown, signerDid: string): Proof => ({
+  type: 'EcdsaSecp256k1Signature2019',
+  created: CREATED,
   verificationMethod: vmOf(signerDid),
-  signature: `sig|${keyOf(signerDid).x}|${data}`,
+  proofPurpose: 'assertionMethod',
+  proofValue: `sig|${keyOf(signerDid).x}|${JSON.stringify(signed)}`,
 });
 const signCred = <T extends object>(body: T, signerDid: string): T & { proof: Proof } => ({
   ...body,
-  proof: sign(JSON.stringify(body), signerDid),
+  proof: sign(body, signerDid),
 });
-/** A presentation's holder proof binds only {holder, challenge, audience} (the credentials carry their own proofs). */
+/** A presentation's holder proof binds {holder, challenge, audience} (the credentials carry their own proofs). */
 const signPres = (holder: string, challenge: string, audience: string, credentials: readonly AAC[]): Presentation => ({
   holder,
   challenge,
   audience,
   credentials,
-  proof: sign(JSON.stringify({ holder, challenge, audience }), holder),
+  proof: sign({ holder, challenge, audience }, holder),
 });
 
 function makeResolver() {
@@ -42,6 +49,7 @@ function makeResolver() {
     agent: (did: string): void => void m.set(did, { did, deactivated: false, kind: 'agent', keys: { [vmOf(did)]: keyOf(did) } }),
     asset: (did: string, data?: unknown): void => void m.set(did, { did, deactivated: false, kind: 'asset', data }),
     deactivate: (did: string): void => { const d = m.get(did); if (d) m.set(did, { ...d, deactivated: true }); },
+    // opts (versionTime) is ignored: the fake has no history, so point-in-time == current here.
     resolver: { resolve: async (did: string): Promise<ResolvedDid | undefined> => m.get(did) } as Resolver,
   };
 }
@@ -102,7 +110,7 @@ test('anchor: a valid present-and-verify succeeds', async () => {
 // @verifies AC-1, AC-2
 test('not bearer: a tampered holder proof is denied', async () => {
   const { pres, req, deps } = world();
-  const forged: Presentation = { ...pres, proof: { ...pres.proof, signature: 'sig|forged|x' } };
+  const forged: Presentation = { ...pres, proof: { ...pres.proof, proofValue: 'sig|forged|x' } };
   assert.equal((await verifyPresentation(forged, req, deps)).reason, 'holder-binding');
 });
 
@@ -110,7 +118,7 @@ test('not bearer: a tampered holder proof is denied', async () => {
 test('not bearer: presenting the AAC under a different holder key is denied', async () => {
   const { pres, req, deps } = world();
   // an attacker holds the credential bytes but signs with their own (unrelated) key/DID
-  const attacker: Presentation = { ...pres, proof: sign(JSON.stringify({ holder: pres.holder, challenge: pres.challenge, audience: pres.audience }), 'did:cid:mallory') };
+  const attacker: Presentation = { ...pres, proof: sign({ holder: pres.holder, challenge: pres.challenge, audience: pres.audience }, 'did:cid:mallory') };
   const res = await verifyPresentation(attacker, req, deps);
   assert.equal(res.ok, false); // the resolved holder key is the agent's, not mallory's → mismatch
 });
