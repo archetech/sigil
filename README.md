@@ -56,6 +56,9 @@ standing permission. Three layers:
 - **Delegation** — authority passes agent→agent as a **multi-hop chain** of AACs that only *narrow* (monotonic
   attenuation); the verifier walks it root→leaf offline, contacting no delegator. See
   [`docs/delegation-chain.md`](docs/delegation-chain.md).
+- **A2A exchange** — present-and-verify as a transport-agnostic protocol (request → challenge → presentation →
+  result) that rides **Archon DIDComm** mailboxes, so two agents that have never met collaborate by DID. See the
+  DIDComm profile in [`docs/presentation-model.md`](docs/presentation-model.md).
 
 Everything rests on the Archon substrate — resolution is operation-log **replay**, revocation is a `delete`, and
 each signature is verified point-in-time against the signer's key state when it signed. See
@@ -134,12 +137,15 @@ src/
   types.ts            AAC / VRC / Presentation / the Resolver + SignatureVerifier seams
   verify.ts           verifyPresentation — the chain-walking verifier (keyless)
   capability.ts       attenuates — the monotonic-attenuation rule (AC-8), shared by issuer + verifier
+  transport.ts        the Transport seam + an in-memory network (offline)
+  protocol.ts         the A2A exchange: request → challenge → presentation → result
   archon/
     resolver.ts       createArchonResolver        — gatekeeper resolution (replay, point-in-time)
     signatures.ts     createArchonSignatureVerifier — @didcid/cipher (JCS + ECDSA secp256k1)
     issuer.ts         createArchonIssuer          — self-custodied mint / delegate / present / revoke
-test/                 node:test — verify · archon (real crypto) · issuer · delegation (round-trips)
-scripts/              e2e-archon-resolve.ts · e2e-archon-prove.ts · e2e-archon-delegate.ts (opt-in, live node)
+    transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
+test/                 node:test — verify · archon (real crypto) · issuer · delegation · step-up · protocol
+scripts/              e2e-archon-{resolve,prove,delegate,stepup,didcomm}.ts (opt-in, live node)
 docs/                 substrate, presentation, agent-credential, DTG reconciliation, delegation, vocabulary, …
 demo/                 interactive web app (Vite) — build a chain and verify it, offline or live
 Requirements/         actor-first requirements (start with sigil-v0-requirements.md)
