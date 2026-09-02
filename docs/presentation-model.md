@@ -198,6 +198,32 @@ Sigil two ways:
 
 ## Traceability
 
+## Implemented — the DIDComm A2A profile
+
+The present-and-verify exchange ships as a transport-agnostic protocol
+([`src/protocol.ts`](../src/protocol.ts)) over a `Transport` seam
+([`src/transport.ts`](../src/transport.ts)):
+
+```
+  presenter → verifier :  request       { action, resource }
+  verifier  → presenter:  challenge     { nonce, audience, action, resource, requireHumanCoSign }
+  presenter → verifier :  presentation  { presentation }        ← built for the fresh challenge
+  verifier  → presenter:  result        { ok, reason?, assuranceLevel? }
+```
+
+The verifier owns the nonce (freshness) and correlates a presentation to the challenge it issued that counterparty;
+verification is the same `verifyPresentation`. `createArchonTransport`
+([`src/archon/transport.ts`](../src/archon/transport.ts)) backs it with **Archon DIDComm** — agents address each
+other by `did:cid`, `send` delivers to a recipient's mailbox and `receive` fetches from this agent's inbox.
+
+Two findings from the live node, worth pinning:
+
+- **A recipient must `publishDidComm` first** — publish an X25519 key-agreement key + a mailbox service — before it
+  can receive. A bare agent DID (signing key only) has no inbox.
+- **Wire identity ≠ authority identity, and that's fine.** The DIDComm sender is a mailbox identity; the *authority*
+  it presents (the AAC chain + holder proof) rides inside the message and is verified independently. The `from` is
+  authenticated (authcrypt), but trust still comes from the presented chain, never from who delivered it.
+
 Design points (convention: [`traceability.md`](traceability.md)); these realize foundational requirements (`R*`):
 
 - `[D-PM-1 → R2, R7]` §3 — Archon's challenge/response is a native W3C VerifiablePresentation (holder-binding + credential presentation + audience + issuer requirements in one exchange); the canonical model.

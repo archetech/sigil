@@ -4,7 +4,7 @@
 
 Chain: **foundational R\* ← feature XX-\* ← design D-\* ← code (@implements) ← test (@verifies)**.
 Foundational `R*` inherit coverage from the feature requirements that realize them ("via").
-34 requirements · 24 design points · 5 tagged code files · 5 tagged test files.
+34 requirements · 24 design points · 8 tagged code files · 6 tagged test files.
 
 | Requirement | Realized by | Design | Code | Tests | Status |
 |---|---|---|---|---|---|
@@ -21,7 +21,7 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | R11 | AC-12 | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R12 | AC-12 | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R13 | AC-11 | D-AAC-8 | src/archon/issuer.ts, src/verify.ts | test/step-up.test.ts | D:✓ C:✓ T:✓ |
-| R14 | — | D-PM-2, D-PM-5 | — | — | D:✓ C:· T:· |
+| R14 | — | D-PM-2, D-PM-5 | src/archon/transport.ts, src/protocol.ts, src/transport.ts | test/protocol.test.ts | D:✓ C:✓ T:✓ |
 | R15 | AC-6 | D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R16 | AC-10 | D-PM-4, D-AAC-6 | src/verify.ts | test/step-up.test.ts | D:✓ C:✓ T:✓ |
 | AC-1 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
@@ -46,5 +46,5 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 ## Gaps
 
 - **No design coverage:** none
-- **No code (pending implementation):** R5, R14, AC-4
-- **No test (pending unit/e2e):** R5, R14, AC-4
+- **No code (pending implementation):** R5, AC-4
+- **No test (pending unit/e2e):** R5, AC-4
