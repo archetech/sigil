@@ -12,6 +12,9 @@ export type Mode = 'offline' | 'live';
 export const AUDIENCE = 'did:web:acme-vendor.example';
 export const ACTIONS = ['read', 'write', 'delete', 'admin'] as const;
 export const RESOURCES = ['res:catalog', 'res:orders', 'res:billing'] as const;
+/** Actions the verifier treats as high-consequence — they require a human co-sign (AC-11). */
+export const HIGH_CONSEQUENCE = new Set(['delete', 'admin']);
+export const isHighConsequence = (action: string): boolean => HIGH_CONSEQUENCE.has(action);
 
 export interface Actor { id: string; name: string; role: 'controller' | 'agent'; did: string; signer: Signer; }
 export interface Hop { did: string; credential: AAC; issuerId: string; subjectId: string; cap: Capability; revoked: boolean; }
@@ -110,11 +113,17 @@ export class DemoEngine {
     hop.revoked = true;
   }
 
-  async verify(action: string, resource: string, audience: string): Promise<VerifyOutcome> {
+  async verify(action: string, resource: string, audience: string, opts: { coSign?: boolean } = {}): Promise<VerifyOutcome> {
     const presenter = this.leafSubject(); if (!presenter) throw new Error('nothing to present');
+    const high = isHighConsequence(action);
     const nonce = crypto.randomUUID();
-    const presentation = this.issuer.present(presenter.signer, { challenge: nonce, audience, credentials: this.chain.map((h) => h.credential) });
-    const req: VerifyRequest = { nonce, audience, action, resource };
+    let presentation = this.issuer.present(presenter.signer, { challenge: nonce, audience, credentials: this.chain.map((h) => h.credential) });
+    // High-consequence + the human approves → the accountable principal (root controller) freshly co-signs.
+    if (high && opts.coSign) {
+      const principal = this.actor(this.controllerId);
+      presentation = { ...presentation, coSign: this.issuer.coSign(principal.signer, { challenge: nonce, audience, action, resource }) };
+    }
+    const req: VerifyRequest = { nonce, audience, action, resource, requireHumanCoSign: high };
 
     // Wrap the resolver to capture every lookup the verifier makes — proving verification is read-only DID/status
     // resolution, and no delegator is contacted for approval (R8).

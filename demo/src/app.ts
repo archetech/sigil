@@ -3,7 +3,7 @@
  * here — every accept/deny comes from `verifyPresentation`. Full re-render on each action keeps the code simple;
  * forms are read at submit time.
  */
-import { DemoEngine, AUDIENCE, ACTIONS, RESOURCES, type VerifyOutcome, type TraceEntry } from './engine.ts';
+import { DemoEngine, AUDIENCE, ACTIONS, RESOURCES, isHighConsequence, type VerifyOutcome, type TraceEntry } from './engine.ts';
 import type { Capability, VerifyResult } from '@sigil';
 
 const engine = new DemoEngine();
@@ -15,6 +15,11 @@ let lastVerify: VerifyOutcome | null = null;
 let showJson = false;
 let busy = false;
 let notice: string | null = null;
+// verify-console form state (bound so the step-up control appears reactively)
+let vAction = 'read';
+let vResource: string = RESOURCES[0];
+let vAudience = AUDIENCE;
+let coSignOn = false;
 
 const short = (did: string): string => (did.length > 22 ? `${did.slice(0, 15)}…${did.slice(-4)}` : did);
 const esc = (s: string): string => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
@@ -157,13 +162,17 @@ function render(): void {
         : `<p class="hint"><strong>${esc(engine.leafSubject()?.name ?? '')}</strong> presents the chain and asks to perform an action. Trust is decided from signatures + DID resolution alone.</p>
            <div class="askrow">
              <span>do</span>
-             <select id="vAction">${ACTIONS.map((a) => `<option>${a}</option>`).join('')}</select>
+             <select id="vAction">${ACTIONS.map((a) => `<option ${a === vAction ? 'selected' : ''}>${a}</option>`).join('')}</select>
              <span>on</span>
-             <select id="vResource">${RESOURCES.map((r) => `<option value="${r}">${r.replace('res:', '')}</option>`).join('')}</select>
+             <select id="vResource">${RESOURCES.map((r) => `<option value="${r}" ${r === vResource ? 'selected' : ''}>${r.replace('res:', '')}</option>`).join('')}</select>
              <span>for</span>
-             <select id="vAudience"><option value="${AUDIENCE}">the vendor</option><option value="did:web:someone-else.example">a different verifier</option></select>
+             <select id="vAudience"><option value="${AUDIENCE}" ${vAudience === AUDIENCE ? 'selected' : ''}>the vendor</option><option value="did:web:someone-else.example" ${vAudience !== AUDIENCE ? 'selected' : ''}>a different verifier</option></select>
              <button data-action="verify" class="primary">Present &amp; verify</button>
            </div>
+           ${isHighConsequence(vAction)
+             ? `<div class="stepup"><span class="hc">⚠ high-consequence</span> requires a human co-sign —
+                  <label class="box"><input type="checkbox" id="coSignToggle" ${coSignOn ? 'checked' : ''}/> co-sign as <strong>${esc(engine.controllerId ? engine.actor(engine.controllerId).name : 'the principal')}</strong> (Signet step-up)</label></div>`
+             : ''}
            ${lastVerify ? renderOutcome(lastVerify) : ''}
            ${log.length ? `<ul class="log">${log.map((e) => `<li class="${e.ok ? 'ok' : 'deny'}"><span class="tag">${e.ok ? 'ACCEPT' : 'DENY'}</span> ${esc(e.title)} <span class="ts">${esc(e.ts)}</span></li>`).join('')}</ul>` : ''}`}
     </section>
@@ -295,17 +304,23 @@ app.addEventListener('click', (ev) => {
     return void run(() => engine.revokeHop(i).then(() => { lastVerify = null; showJson = false; }));
   }
   if (action === 'verify') {
-    const a = (document.getElementById('vAction') as HTMLSelectElement).value;
-    const r = (document.getElementById('vResource') as HTMLSelectElement).value;
-    const aud = (document.getElementById('vAudience') as HTMLSelectElement).value;
     return void run(async () => {
-      const res = await engine.verify(a, r, aud);
+      const res = await engine.verify(vAction, vResource, vAudience, { coSign: coSignOn });
       lastVerify = res; showJson = false;
       const rr = res.result;
-      log = [{ ok: rr.ok, title: `${a} ${r.replace('res:', '')} ${aud === AUDIENCE ? '(vendor)' : '(other verifier)'}${rr.ok ? '' : ` — ${rr.reason}`}`, detail: rr.reason ?? '', ts: new Date().toLocaleTimeString() }, ...log].slice(0, 8);
+      const cs = isHighConsequence(vAction) && coSignOn ? ' + co-sign' : '';
+      log = [{ ok: rr.ok, title: `${vAction}${cs} ${vResource.replace('res:', '')} ${vAudience === AUDIENCE ? '(vendor)' : '(other verifier)'}${rr.ok ? '' : ` — ${rr.reason}`}`, detail: rr.reason ?? '', ts: new Date().toLocaleTimeString() }, ...log].slice(0, 8);
     });
   }
   if (action === 'scenario') return void run(loadScenario);
+});
+
+app.addEventListener('change', (ev) => {
+  const el = ev.target as HTMLElement;
+  if (el.id === 'vAction') { vAction = (el as HTMLSelectElement).value; coSignOn = false; render(); } // re-approve per action
+  else if (el.id === 'vResource') { vResource = (el as HTMLSelectElement).value; }
+  else if (el.id === 'vAudience') { vAudience = (el as HTMLSelectElement).value; }
+  else if (el.id === 'coSignToggle') { coSignOn = (el as HTMLInputElement).checked; }
 });
 
 async function loadScenario(): Promise<void> {
@@ -313,8 +328,8 @@ async function loadScenario(): Promise<void> {
   await engine.ensureController();
   const a = await engine.addAgent();
   await engine.addAgent();
-  await engine.issueRoot(a.id, { actions: ['read', 'write'], resources: ['res:catalog', 'res:orders'], constraints: { audience: [AUDIENCE] }, delegable: true });
-  await engine.delegate(engine.actors.filter((x) => x.role === 'agent').at(-1)!.id, { actions: ['read'], resources: ['res:catalog'], constraints: { audience: [AUDIENCE] }, delegable: false });
+  await engine.issueRoot(a.id, { actions: ['read', 'write', 'delete'], resources: ['res:catalog', 'res:orders'], constraints: { audience: [AUDIENCE] }, delegable: true });
+  await engine.delegate(engine.actors.filter((x) => x.role === 'agent').at(-1)!.id, { actions: ['read', 'delete'], resources: ['res:catalog'], constraints: { audience: [AUDIENCE] }, delegable: false });
 }
 
 render();

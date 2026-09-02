@@ -138,6 +138,9 @@ input[type="text"] { font-family: var(--mono); font-size: .82rem; min-width: 15r
 
 .askrow { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; margin: .5rem 0; font-size: .9rem; }
 .askrow span { color: var(--muted); }
+.stepup { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .84rem; color: var(--muted); margin: 0 0 .3rem; padding: .5rem .7rem; border: 1px solid color-mix(in srgb, var(--deny) 32%, var(--border)); border-radius: 9px; background: var(--deny-soft); }
+.stepup .hc { color: var(--deny); font-weight: 600; }
+.stepup .box { background: var(--surface); border-color: color-mix(in srgb, var(--deny) 25%, var(--border)); }
 .banner { display: flex; align-items: center; gap: 1rem; padding: .8rem 1rem; border-radius: 11px; margin: .7rem 0; flex-wrap: wrap; }
 .banner.ok { background: var(--ok-soft); color: var(--ok); }
 .banner.deny { background: var(--deny-soft); color: var(--deny); }

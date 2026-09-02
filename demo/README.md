@@ -24,6 +24,8 @@ npm run dev          # http://localhost:5173
 4. **Present & verify** — the leaf presents the whole chain and asks to perform an action; the verifier walks it
    root → leaf and accepts or denies, with the check-class reason. Try an action the chain narrowed away, or an
    action for a different verifier, or verify after revoking a hop.
+5. **Human step-up** — a **high-consequence** action (`delete`, `admin`) is denied on its own; a toggle lets the
+   principal **co-sign** it (a fresh proof-of-human approval), lifting the result to `human-co-signed`.
 
 The **"Load a 2-hop scenario"** button sets up a chain instantly for a quick tour.
 
