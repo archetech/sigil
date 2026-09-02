@@ -3,6 +3,7 @@
  * here — every accept/deny comes from `verifyPresentation`. Full re-render on each action keeps the code simple;
  * forms are read at submit time.
  */
+import './polyfills.ts'; // MUST be first — sets globalThis.Buffer before the cipher module loads
 import { DemoEngine, AUDIENCE, ACTIONS, RESOURCES, isHighConsequence, type VerifyOutcome, type TraceEntry } from './engine.ts';
 import type { Capability, VerifyResult } from '@sigil';
 
