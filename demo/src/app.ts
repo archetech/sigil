@@ -3,7 +3,7 @@
  * here — every accept/deny comes from `verifyPresentation`. Full re-render on each action keeps the code simple;
  * forms are read at submit time.
  */
-import { DemoEngine, AUDIENCE, ACTIONS, RESOURCES, type Mode } from './engine.ts';
+import { DemoEngine, AUDIENCE, ACTIONS, RESOURCES, type VerifyOutcome, type TraceEntry } from './engine.ts';
 import type { Capability, VerifyResult } from '@sigil';
 
 const engine = new DemoEngine();
@@ -11,7 +11,8 @@ const app = document.getElementById('app')!;
 
 type LogEntry = { ok: boolean; title: string; detail: string; ts: string };
 let log: LogEntry[] = [];
-let lastResult: VerifyResult | null = null;
+let lastVerify: VerifyOutcome | null = null;
+let showJson = false;
 let busy = false;
 let notice: string | null = null;
 
@@ -163,7 +164,7 @@ function render(): void {
              <select id="vAudience"><option value="${AUDIENCE}">the vendor</option><option value="did:web:someone-else.example">a different verifier</option></select>
              <button data-action="verify" class="primary">Present &amp; verify</button>
            </div>
-           ${lastResult ? resultBanner(lastResult) : ''}
+           ${lastVerify ? renderOutcome(lastVerify) : ''}
            ${log.length ? `<ul class="log">${log.map((e) => `<li class="${e.ok ? 'ok' : 'deny'}"><span class="tag">${e.ok ? 'ACCEPT' : 'DENY'}</span> ${esc(e.title)} <span class="ts">${esc(e.ts)}</span></li>`).join('')}</ul>` : ''}`}
     </section>
   </main>
@@ -194,11 +195,34 @@ function resultBanner(r: VerifyResult): string {
   return `<div class="banner deny"><span class="big">DENY</span><span><code>${esc(r.reason ?? '')}</code> — ${esc(REASON[r.reason ?? ''] ?? 'denied')}</span></div>`;
 }
 
+const PURPOSE: Record<TraceEntry['purpose'], string> = {
+  key: 'public key @ signing version',
+  liveness: 'liveness (now)',
+  status: 'revocation status (now)',
+};
+
+function renderOutcome(o: VerifyOutcome): string {
+  return resultBanner(o.result) + tracePanel(o.trace) + `
+    <div class="jsonwrap">
+      <button data-action="toggle-json" class="link">${showJson ? 'hide' : 'view'} the signed presentation (VP)</button>
+      ${showJson ? `<pre class="json">${esc(JSON.stringify(o.presentation, null, 2))}</pre>` : ''}
+    </div>`;
+}
+
+function tracePanel(trace: TraceEntry[]): string {
+  return `
+    <div class="trace">
+      <div class="tracehead"><strong>${trace.length}</strong> resolveDID ${trace.length === 1 ? 'lookup' : 'lookups'} · <span class="zero">0 delegators contacted for approval</span></div>
+      <ol>${trace.map((t) => `<li><code>resolveDID</code> <span class="who">${esc(t.label)}</span> <span class="purpose ${t.purpose}">${PURPOSE[t.purpose]}</span></li>`).join('')}</ol>
+      <p class="hint">Every step is a read-only resolution against the gatekeeper (operation-log replay). A delegator's DID is resolved for its <em>public key</em> — it is never asked to approve; its past signature <em>is</em> the trust. That is the offline (R8) property.</p>
+    </div>`;
+}
+
 // ── actions ────────────────────────────────────────────────────────────────
 async function run(fn: () => Promise<void>): Promise<void> {
   busy = true; render();
   try { await fn(); }
-  catch (e) { notice = null; lastResult = null; alert(e instanceof Error ? e.message : String(e)); }
+  catch (e) { notice = null; lastVerify = null; alert(e instanceof Error ? e.message : String(e)); }
   finally { busy = false; render(); }
 }
 
@@ -207,11 +231,12 @@ app.addEventListener('click', (ev) => {
   if (!el) return;
   const action = el.dataset.action!;
 
-  if (action === 'mode-offline') return void run(async () => { await engine.setOffline(); lastResult = null; log = []; notice = null; });
+  if (action === 'toggle-json') { showJson = !showJson; render(); return; }
+  if (action === 'mode-offline') return void run(async () => { await engine.setOffline(); lastVerify = null; showJson = false; log = []; notice = null; });
   if (action === 'mode-live') { notice = 'live-form'; engine.mode = 'live'; render(); return; }
   if (action === 'connect') {
     const url = (document.getElementById('nodeUrl') as HTMLInputElement)?.value.trim();
-    return void run(async () => { await engine.setLive(url); lastResult = null; log = []; notice = engine.mode === 'live' ? null : 'live-form'; });
+    return void run(async () => { await engine.setLive(url); lastVerify = null; showJson = false; log = []; notice = engine.mode === 'live' ? null : 'live-form'; });
   }
   if (action === 'add-agent') return void run(() => engine.addAgent().then(() => {}));
   if (action === 'issue-root') {
@@ -230,7 +255,7 @@ app.addEventListener('click', (ev) => {
   }
   if (action.startsWith('revoke:')) {
     const i = Number(action.split(':')[1]);
-    return void run(() => engine.revokeHop(i).then(() => { lastResult = null; }));
+    return void run(() => engine.revokeHop(i).then(() => { lastVerify = null; showJson = false; }));
   }
   if (action === 'verify') {
     const a = (document.getElementById('vAction') as HTMLSelectElement).value;
@@ -238,15 +263,16 @@ app.addEventListener('click', (ev) => {
     const aud = (document.getElementById('vAudience') as HTMLSelectElement).value;
     return void run(async () => {
       const res = await engine.verify(a, r, aud);
-      lastResult = res;
-      log = [{ ok: res.ok, title: `${a} ${r.replace('res:', '')} ${aud === AUDIENCE ? '(vendor)' : '(other verifier)'}${res.ok ? '' : ` — ${res.reason}`}`, detail: res.reason ?? '', ts: new Date().toLocaleTimeString() }, ...log].slice(0, 8);
+      lastVerify = res; showJson = false;
+      const rr = res.result;
+      log = [{ ok: rr.ok, title: `${a} ${r.replace('res:', '')} ${aud === AUDIENCE ? '(vendor)' : '(other verifier)'}${rr.ok ? '' : ` — ${rr.reason}`}`, detail: rr.reason ?? '', ts: new Date().toLocaleTimeString() }, ...log].slice(0, 8);
     });
   }
   if (action === 'scenario') return void run(loadScenario);
 });
 
 async function loadScenario(): Promise<void> {
-  engine.reset(); lastResult = null; log = [];
+  engine.reset(); lastVerify = null; showJson = false; log = [];
   await engine.ensureController();
   const a = await engine.addAgent();
   await engine.addAgent();
