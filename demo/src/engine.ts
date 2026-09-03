@@ -83,11 +83,16 @@ export class DemoEngine {
   actor(id: string): Actor { const a = this.actors.find((x) => x.id === id); if (!a) throw new Error(`unknown actor ${id}`); return a; }
   leaf(): Hop | undefined { return this.chain[this.chain.length - 1]; }
   leafSubject(): Actor | undefined { const l = this.leaf(); return l ? this.actor(l.subjectId) : undefined; }
-  /** Agents that can currently delegate: the leaf's subject, if its capability is delegable and not revoked. */
+  /** The agent that can currently delegate onward: the leaf's subject, unless the leaf hop is revoked. Delegation
+   *  is never blocked by `delegable` (advisory only) — blocking delegation is an anti-pattern. */
   canDelegateFrom(): Actor | undefined {
     const l = this.leaf();
-    if (!l || l.revoked || l.cap.delegable !== true) return undefined;
+    if (!l || l.revoked) return undefined;
     return this.actor(l.subjectId);
+  }
+  /** True when the leaf's capability marks itself non-delegable — advisory policy the delegation will override. */
+  leafDiscouragesDelegation(): boolean {
+    return this.leaf()?.cap.delegable === false;
   }
 
   async ensureController(): Promise<Actor> {

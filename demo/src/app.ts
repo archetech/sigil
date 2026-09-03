@@ -32,7 +32,6 @@ const REASON: Record<string, string> = {
   'relationship-revoked': 'The root’s controller relationship (VRC) was revoked.',
   'relationship-unresolvable': 'The root’s controller relationship (VRC) could not be resolved.',
   'chain-linkage': 'A hop is missing or out of order — the chain does not link parent→child.',
-  'not-delegable': 'A parent capability did not permit delegation.',
   attenuation: 'A hop tried to widen its parent — refused (monotonic attenuation).',
   'holder-mismatch': 'The presenter is not the leaf’s subject.',
   'holder-binding': 'The holder’s signature over the challenge did not verify.',
@@ -141,11 +140,12 @@ function render(): void {
           : delegateFrom
             ? `<div class="form">
                  <p class="hint"><strong>${esc(delegateFrom.name)}</strong> delegates a <em>narrowed</em> slice of its authority. Greyed boxes are outside the parent — you can only narrow.</p>
+                 ${engine.leafDiscouragesDelegation() ? `<div class="advisory">policy: this capability requests <strong>no further delegation</strong> (<code>delegable: false</code>). That’s advisory — it isn’t enforced. Delegating is still allowed and the hop is recorded in the chain for audit. <em>Blocking delegation is an anti-pattern.</em></div>` : ''}
                  <label class="label">To</label><select id="delSubject">${agentOptions([delegateFrom.id])}</select>
                  ${capEditor('del', leaf!.cap)}
                  <button data-action="delegate" class="primary">Delegate</button>
                </div>`
-            : `<p class="hint">The chain’s leaf can’t delegate further (its capability isn’t <code>delegable</code>, or it was revoked). Verify it below, or load a new scenario.</p>`}
+            : `<p class="hint">The chain’s leaf hop was revoked, so it can’t delegate further. Verify it below, or load a new scenario.</p>`}
     </section>
 
     <section class="card chain">
