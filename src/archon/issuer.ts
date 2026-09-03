@@ -14,9 +14,9 @@
  *   - `present`           — a holder-signed presentation binding {holder, challenge, audience}.
  *   - `revoke`            — a `delete` operation (irreversible), for teardown or real revocation.
  *
- * @implements R1, R3, R6, AC-3, AC-11
+ * @implements R1, R3, R6, AC-3, AC-11, TR-3
  */
-import type { AAC, VRC, Capability, CoSign, Presentation, Proof, Jwk } from '../types.ts';
+import type { AAC, VRC, Capability, CoSign, TrustCredential, Presentation, Proof, Jwk } from '../types.ts';
 import { attenuates } from '../capability.ts';
 import { hexToBase64url } from '../base64url.ts';
 
@@ -72,9 +72,12 @@ export interface ArchonIssuer {
     authorization: Capability,
     opts?: { validFrom?: string; validUntil?: string; assuranceLevel?: string },
   ): Promise<{ did: string; credential: AAC }>;
-  present(holder: Signer, opts: { challenge: string; audience: string; credentials: readonly AAC[] }): Presentation;
+  present(holder: Signer, opts: { challenge: string; audience: string; credentials: readonly AAC[]; trust?: readonly TrustCredential[] }): Presentation;
   /** The accountable principal freshly co-signs a specific high-consequence request — a proof-of-human step-up. */
   coSign(authorizer: Signer, req: { challenge: string; audience: string; action: string; resource: string }): CoSign;
+  /** An anchor (endorser / witness / registry) vouches for a controller — a DTG trust-graph credential (TR-3).
+   *  `kind`: 'endorsement' (VEC) / 'witness' (VWC) / 'membership' (VMC). Minted as the endorser's asset. */
+  mintEndorsement(endorser: Signer, controllerDid: string, kind: 'endorsement' | 'witness' | 'membership'): Promise<{ did: string; credential: TrustCredential }>;
   revoke(did: string, controller: Signer): Promise<boolean>;
 }
 
@@ -156,15 +159,29 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
       }));
     },
 
-    present(holder, { challenge, audience, credentials }) {
+    present(holder, { challenge, audience, credentials, trust }) {
       const { proof } = signed({ holder: holder.did, challenge, audience }, holder.privateJwk, vm(holder.did));
-      return { holder: holder.did, challenge, audience, credentials, proof };
+      return { holder: holder.did, challenge, audience, credentials, proof, ...(trust ? { trust } : {}) };
     },
 
     coSign(authorizer, { challenge, audience, action, resource }) {
       const body = { authorizer: authorizer.did, challenge, audience, action, resource };
       const { proof } = signed(body, authorizer.privateJwk, vm(authorizer.did));
       return { ...body, proof };
+    },
+
+    async mintEndorsement(endorser, controllerDid, kind) {
+      const dtgType = kind === 'witness' ? 'VerifiableWitnessCredential' : kind === 'membership' ? 'DTGMembershipCredential' : 'VerifiableEndorsementCredential';
+      const build = (did: string) => ({ id: did, type: ['VerifiableCredential', dtgType], issuer: endorser.did, credentialSubject: { id: controllerDid } });
+      const did = await createAsset(endorser, { pending: true });
+      const credential = signed(build(did), endorser.privateJwk, vm(endorser.did)) as TrustCredential;
+      const current = await gatekeeper.resolveDID(did);
+      const doc: Record<string, unknown> = { ...current, didDocumentData: credential };
+      delete doc.didDocumentMetadata;
+      delete doc.didResolutionMetadata;
+      const updateOp = { type: 'update', did, previd: current.didDocumentMetadata?.versionId, blockid: await blockid(), doc };
+      await gatekeeper.updateDID(signed(updateOp, endorser.privateJwk, vm(endorser.did)));
+      return { did, credential };
     },
 
     async revoke(did, controller) {

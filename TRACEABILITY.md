@@ -4,7 +4,7 @@
 
 Chain: **foundational R\* ← feature XX-\* ← design D-\* ← code (@implements) ← test (@verifies)**.
 Foundational `R*` inherit coverage from the feature requirements that realize them ("via").
-34 requirements · 24 design points · 8 tagged code files · 6 tagged test files.
+39 requirements · 29 design points · 8 tagged code files · 7 tagged test files.
 
 | Requirement | Realized by | Design | Code | Tests | Status |
 |---|---|---|---|---|---|
@@ -17,13 +17,13 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | R7 | AC-5, AC-6 | D-PM-1, D-AAC-7, D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R8 | DC-1, DC-2, DC-5 | D-AS-2, D-AS-3, D-DC-1, D-DC-5, D-DC-2 | src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | R9 | AC-13, AC-7, AC-8 | D-AAC-11, D-AAC-4, D-AS-1, D-AAC-10 | src/verify.ts, src/archon/resolver.ts, src/capability.ts | test/issuer.test.ts, test/verify.test.ts, test/archon.test.ts, test/delegation.test.ts | D:✓ C:✓ T:✓ |
-| R10 | AC-13, AC-7 | D-AAC-11, D-AAC-4, D-AS-1 | src/archon/resolver.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R10 | AC-13, AC-7, TR-5 | D-TR-5, D-AAC-11, D-AAC-4, D-AS-1 | src/archon/resolver.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
 | R11 | AC-12 | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R12 | AC-12 | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R13 | AC-11 | D-AAC-8 | src/archon/issuer.ts, src/verify.ts | test/step-up.test.ts | D:✓ C:✓ T:✓ |
 | R14 | — | D-PM-2, D-PM-5 | src/archon/transport.ts, src/protocol.ts, src/transport.ts | test/protocol.test.ts | D:✓ C:✓ T:✓ |
 | R15 | AC-6 | D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
-| R16 | AC-10 | D-PM-4, D-AAC-6 | src/verify.ts | test/step-up.test.ts | D:✓ C:✓ T:✓ |
+| R16 | AC-10, TR-1, TR-2, TR-3, TR-4, TR-5 | D-PM-4, D-TR-3, D-AAC-6, D-TR-1, D-TR-2, D-TR-4, D-TR-5 | src/verify.ts, src/archon/issuer.ts | test/step-up.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
 | AC-1 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-2 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-3 | — | D-AAC-11, D-AAC-2 | src/archon/issuer.ts, src/archon/signatures.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
@@ -33,7 +33,7 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | AC-7 | — | D-AAC-4, D-AS-1 | src/archon/resolver.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-8 | — | D-AAC-10 | src/capability.ts, src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | AC-9 | — | D-AAC-5 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
-| AC-10 | — | D-AAC-6 | src/verify.ts | test/step-up.test.ts | D:✓ C:✓ T:✓ |
+| AC-10 | — | D-AAC-6, D-TR-1 | src/verify.ts | test/step-up.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
 | AC-11 | — | D-AAC-8 | src/archon/issuer.ts, src/verify.ts | test/step-up.test.ts | D:✓ C:✓ T:✓ |
 | AC-12 | — | D-AAC-9 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-13 | — | D-AAC-11 | src/verify.ts | test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
@@ -42,6 +42,11 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | DC-3 | — | D-DC-3 | src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | DC-4 | — | D-DC-4 | src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | DC-5 | — | D-AS-2, D-DC-5 | src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
+| TR-1 | — | D-TR-1 | src/verify.ts | test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
+| TR-2 | — | D-TR-2 | src/verify.ts | test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
+| TR-3 | — | D-TR-3 | src/archon/issuer.ts, src/verify.ts | test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
+| TR-4 | — | D-TR-4 | src/verify.ts | test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
+| TR-5 | — | D-TR-5 | src/verify.ts | test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
 
 ## Gaps
 

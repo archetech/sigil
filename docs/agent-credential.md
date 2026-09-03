@@ -145,8 +145,12 @@ Archon's three challenge types seed an assurance ladder carried in `assuranceLev
 |---|---|---|
 | `identity` | the agent controls its DID | holder proof only (no AAC required) |
 | `controller-vouched` | a controller signed the agent's authority | AAC present, issuer signature verifies |
-| `issuer-pinned` | the controller is one the verifier trusts *a priori* | AAC issuer ∈ the verifier's trusted-controller set |
-| *(+ human-co-signed)* | a proof-of-human step-up co-signed the authority | AAC + a human co-sign assertion (high-consequence) |
+| `issuer-pinned` | the controller is one the verifier trusts *a priori* | root issuer ∈ verifier's pinned set, or a `VMC` membership from a trusted registry |
+| `endorsed` / `witnessed` | a trusted anchor vouches for / witnesses the controller | a `VEC` / `VWC` about the root issuer, signed by a verifier-trusted anchor |
+| `human-co-signed` | a proof-of-human step-up co-signed the authority | AAC + a fresh principal co-sign (high-consequence) |
+
+The verifier **derives** this level from what it can prove — it never accepts the level a credential asserts. The
+root-of-trust machinery for the middle rungs is [`trust-registry.md`](trust-registry.md) (TR-1…TR-5).
 
 **Human step-up (AC-11).** When the verifier designates the requested action *high-consequence*, the AAC alone is
 not enough: the presentation MUST carry a **co-sign** — a fresh signature by the **accountable principal** (the
