@@ -59,6 +59,9 @@ standing permission. Three layers:
 - **A2A exchange** — present-and-verify as a transport-agnostic protocol (request → challenge → presentation →
   result) that rides **Archon DIDComm** mailboxes, so two agents that have never met collaborate by DID. See the
   DIDComm profile in [`docs/presentation-model.md`](docs/presentation-model.md).
+- **Trust levels** — the verifier *derives* an assurance level from what it can prove, and raises it from a
+  decentralized **trust graph** (DTG endorsement / witness / membership from anchors it trusts) rather than a
+  central list. See [`docs/trust-registry.md`](docs/trust-registry.md).
 
 Everything rests on the Archon substrate — resolution is operation-log **replay**, revocation is a `delete`, and
 each signature is verified point-in-time against the signer's key state when it signed. See
@@ -135,7 +138,7 @@ cd demo && npm install && npm run dev
 src/
   index.ts            public surface
   types.ts            AAC / VRC / Presentation / the Resolver + SignatureVerifier seams
-  verify.ts           verifyPresentation — the chain-walking verifier (keyless)
+  verify.ts           verifyPresentation — the chain-walking verifier (keyless); derives assurance
   capability.ts       attenuates — the monotonic-attenuation rule (AC-8), shared by issuer + verifier
   transport.ts        the Transport seam + an in-memory network (offline)
   protocol.ts         the A2A exchange: request → challenge → presentation → result

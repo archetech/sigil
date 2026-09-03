@@ -8,7 +8,7 @@
  * the signature primitive is behind `SignatureVerifier`. The logic here is what Sigil owns; the crypto and the
  * substrate are injected.
  */
-import type { AAC, VRC, Jwk, Proof, CoSign, Presentation, VerifyRequest, VerifyDeps, VerifyResult } from './types.ts';
+import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, Presentation, VerifyRequest, VerifyDeps, VerifyResult } from './types.ts';
 import { attenuates } from './capability.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
@@ -27,7 +27,7 @@ function holderSignedData(p: Presentation): unknown {
   return { holder: p.holder, challenge: p.challenge, audience: p.audience };
 }
 /** The object a credential's issuer signs — the credential without its `proof`. */
-function credentialBody(c: AAC | VRC): unknown {
+function credentialBody(c: AAC | VRC | TrustCredential): unknown {
   const { proof: _proof, ...rest } = c;
   return rest;
 }
@@ -80,11 +80,50 @@ async function verifyRoot(root: AAC, deps: VerifyDeps): Promise<VerifyResult> {
   return { ok: true };
 }
 
+/** The DTG rung a trust credential's `type` can confer. */
+function trustRung(tc: TrustCredential): string | undefined {
+  const t = tc.type;
+  if (t.includes('VerifiableWitnessCredential')) return 'witnessed';
+  if (t.includes('VerifiableEndorsementCredential')) return 'endorsed';
+  if (t.includes('DTGMembershipCredential')) return 'issuer-pinned';
+  return undefined;
+}
+
+/**
+ * Derive the assurance level from what the verifier can independently prove — never from the issuer's asserted
+ * `assuranceLevel` (TR-1). Base is `controller-vouched` (the root's VRC verified during the chain walk). The trust
+ * policy raises it: a pinned root issuer → `issuer-pinned` (TR-2); each presented trust credential that is about the
+ * root issuer, signed by a **trusted anchor**, verifies point-in-time, and is not revoked → its rung (TR-3). Any
+ * credential that fails those tests is ignored — fail safe to lower, never deny (TR-4). Returns the highest rung.
+ * @implements TR-1, TR-2, TR-3, TR-4, AC-10
+ */
+async function deriveAssurance(rootIssuer: string, p: Presentation, deps: VerifyDeps, now: string): Promise<string> {
+  let best = LADDER.indexOf('controller-vouched');
+  const raise = (rung: string): void => { const i = LADDER.indexOf(rung); if (i > best) best = i; };
+  const policy = deps.trust;
+  if (!policy) return LADDER[best]!;
+
+  if (policy.pinnedIssuers?.includes(rootIssuer)) raise('issuer-pinned');
+
+  for (const tc of p.trust ?? []) {
+    const rung = trustRung(tc);
+    if (!rung) continue;
+    if (tc.credentialSubject.id !== rootIssuer) continue;      // must be about the root controller
+    if (!policy.anchors.includes(tc.issuer)) continue;          // signed by an anchor the verifier trusts
+    const status = await deps.resolver.resolve(tc.id);          // not revoked (fail safe: unresolvable ⇒ skip)
+    if (!status || status.deactivated) continue;
+    const key = await signerKeyAt(deps, tc.proof, tc.issuer);   // anchor's key state at signing time
+    if (!key || !(await deps.signatures.verify(credentialBody(tc), tc.proof, key))) continue;
+    raise(rung);
+  }
+  return LADDER[best]!;
+}
+
 /**
  * Verify a present-and-verify over a complete ordered delegation chain. Returns `{ ok: true, assuranceLevel }` or a
  * denial whose `reason` is a check-class label only (never the subject or full scope) — minimal disclosure.
  *
- * @implements AC-1, AC-2, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, DC-1, DC-2, DC-3, DC-4, DC-5
+ * @implements AC-1, AC-2, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, DC-1, DC-2, DC-3, DC-4, DC-5, TR-1, TR-5
  */
 export async function verifyPresentation(p: Presentation, req: VerifyRequest, deps: VerifyDeps): Promise<VerifyResult> {
   const now = req.now ?? new Date().toISOString();
@@ -149,8 +188,10 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
   if (aud && !aud.includes(req.audience)) return deny('audience'); // prevents redirect to a non-audience verifier
   if (cap.constraints?.notAfter && now > cap.constraints.notAfter) return deny('constraint-expired');
 
-  // Trust level — a verified chain yields at least controller-vouched; the leaf carries the effective level.
-  let level = leaf.credentialSubject.assuranceLevel ?? 'controller-vouched';
+  // Trust level — DERIVED from what the verifier can prove, never taken from the issuer's asserted `assuranceLevel`
+  // (TR-1). A verified chain (root anchored to a VRC) yields at least controller-vouched; the trust-registry layer
+  // raises it from evidence the verifier trusts.
+  let level = await deriveAssurance(root.issuer, p, deps, now);
 
   // Human step-up — for an action the verifier designates high-consequence, require a fresh proof-of-human co-sign
   // by the accountable principal (the root's controller), bound to THIS exact request. [AC-11]

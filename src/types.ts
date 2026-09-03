@@ -82,6 +82,31 @@ export interface VRC {
 }
 
 /**
+ * A DTG trust-graph credential *about a controller* — the decentralized form of a "trust registry" entry. An
+ * endorser/witness/registry (`issuer`) attests to the controller (`credentialSubject.id`). The `type` array's DTG
+ * member selects the rung it can confer: `VerifiableEndorsementCredential` (VEC) → `endorsed`,
+ * `VerifiableWitnessCredential` (VWC) → `witnessed`, `DTGMembershipCredential` (VMC) → `issuer-pinned`. It raises
+ * assurance only when the verifier trusts `issuer` as an anchor and it verifies + is unrevoked (see TrustPolicy).
+ */
+export interface TrustCredential {
+  readonly id: string;
+  readonly type: readonly string[];
+  /** The endorser / witness / registry. */
+  readonly issuer: string;
+  /** The controller being vouched for. */
+  readonly credentialSubject: { readonly id: string };
+  readonly proof: Proof;
+}
+
+/** A verifier's root-of-trust policy: the anchors whose trust credentials it honors, and issuers it pins a priori. */
+export interface TrustPolicy {
+  /** DIDs the verifier trusts as endorsers / witnesses / registries — the anchors trust evidence must be signed by. */
+  readonly anchors: readonly string[];
+  /** Controller DIDs the verifier trusts a priori → at least `issuer-pinned`. */
+  readonly pinnedIssuers?: readonly string[];
+}
+
+/**
  * A proof-of-human step-up: the accountable principal (the root's controller) *freshly* co-signs a specific
  * request — bound to the challenge, audience, action, and resource, so a standing capability alone is not enough
  * and the co-sign cannot be replayed onto a different action. The "human" property is key custody (the authorizer
@@ -112,6 +137,9 @@ export interface Presentation {
   readonly proof: Proof;
   /** Present for a high-consequence action: the principal's proof-of-human co-sign (AC-11). */
   readonly coSign?: CoSign;
+  /** Optional DTG trust-graph credentials about the root controller, to raise assurance (TR-3). Their absence only
+   *  lowers the derived level; they can never make an invalid chain valid. */
+  readonly trust?: readonly TrustCredential[];
 }
 
 /** What the verifier asks, plus the specific action being authorized. */
@@ -157,6 +185,8 @@ export interface SignatureVerifier {
 export interface VerifyDeps {
   readonly resolver: Resolver;
   readonly signatures: SignatureVerifier;
+  /** The verifier's root-of-trust policy (TR-2, TR-3). Absent → assurance derives from the VRC + co-sign only. */
+  readonly trust?: TrustPolicy;
 }
 
 /** The verifier's decision. Denials carry a check-class label only — minimal disclosure. */

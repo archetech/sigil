@@ -29,6 +29,8 @@ export type {
   AAC,
   VRC,
   CoSign,
+  TrustCredential,
+  TrustPolicy,
   Presentation,
   VerifyRequest,
   VerifyResult,
