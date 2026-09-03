@@ -9,6 +9,26 @@ import type { Capability } from './types.ts';
 
 const subset = (child: readonly string[], parent: readonly string[]): boolean => child.every((x) => parent.includes(x));
 
+const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string');
+
+/**
+ * A capability MUST be a **structured** object — `actions` and `resources` as string arrays, optional structured
+ * `constraints`, optional boolean `delegable`/`parent` — never free-text scope (R5/AC-4). The verifier rejects any
+ * hop whose authorization is not structured, so free-text or malformed authority is unrepresentable in a verified
+ * chain and can't be smuggled past scope checks.
+ *
+ * @implements R5, AC-4
+ */
+export function isStructuredCapability(x: unknown): x is Capability {
+  if (typeof x !== 'object' || x === null) return false;
+  const c = x as Record<string, unknown>;
+  if (!isStringArray(c.actions) || !isStringArray(c.resources)) return false;
+  if (c.constraints !== undefined && (typeof c.constraints !== 'object' || c.constraints === null)) return false;
+  if (c.delegable !== undefined && typeof c.delegable !== 'boolean') return false;
+  if (c.parent !== undefined && c.parent !== null && typeof c.parent !== 'string') return false;
+  return true;
+}
+
 export function attenuates(child: Capability, parent: Capability): boolean {
   if (!subset(child.actions, parent.actions)) return false;
   if (!subset(child.resources, parent.resources)) return false;
