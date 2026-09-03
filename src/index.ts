@@ -11,8 +11,8 @@ export type { ArchonCipher } from './archon/signatures.ts';
 export { createArchonIssuer } from './archon/issuer.ts';
 export type { ArchonIssuer, Signer, PrivateJwk, IssuerGatekeeper, IssuerCipher, IssuerOptions } from './archon/issuer.ts';
 
-// The monotonic-attenuation rule (AC-8), shared by issuer and verifier.
-export { attenuates } from './capability.ts';
+// The monotonic-attenuation rule (AC-8) + the structured-authorization guard (R5/AC-4), shared by issuer + verifier.
+export { attenuates, isStructuredCapability } from './capability.ts';
 
 // The A2A transport + protocol: present-and-verify as a message exchange over any transport (DIDComm in production).
 export { inMemoryNetwork } from './transport.ts';

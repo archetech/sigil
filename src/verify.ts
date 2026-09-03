@@ -9,7 +9,7 @@
  * substrate are injected.
  */
 import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, Presentation, Invocation, Receipt, InvocationRecord, VerifyRequest, VerifyDeps, VerifyResult, RecordResult } from './types.ts';
-import { attenuates } from './capability.ts';
+import { attenuates, isStructuredCapability } from './capability.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
 
@@ -169,6 +169,8 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
     const hop = chain[i];
     if (!hop) return deny('presentation-shape');
 
+    // Structured authorization — every hop must carry a structured capability, never free-text scope. [R5, AC-4]
+    if (!isStructuredCapability(hop.credentialSubject.authorization)) return deny('authorization-shape');
     // Revocation — resolve the hop by DID; a `delete` (deactivated) or an unresolvable hop denies. [DC-5 current]
     const status = await deps.resolver.resolve(hop.id);
     if (!status || status.deactivated) return deny('revoked');

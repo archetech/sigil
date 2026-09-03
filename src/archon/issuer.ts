@@ -17,7 +17,7 @@
  * @implements R1, R3, R6, AC-3, AC-11, TR-3, INV-1, INV-4
  */
 import type { AAC, VRC, Capability, CoSign, TrustCredential, Presentation, Invocation, Receipt, Proof, Jwk } from '../types.ts';
-import { attenuates } from '../capability.ts';
+import { attenuates, isStructuredCapability } from '../capability.ts';
 import { hexToBase64url } from '../base64url.ts';
 
 /** A private JWK carries `d`; kept in-process, never disclosed. */
@@ -142,6 +142,7 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
     },
 
     async mintAuthorization(controller, subject, relationshipDid, authorization, opts = {}) {
+      if (!isStructuredCapability(authorization)) throw new Error('mintAuthorization: authorization must be structured (R5/AC-4)');
       // A root AAC: it references the establishing VRC and carries no `parent`.
       return mintAacAsset(controller, (did) => ({
         ...aacBase(did, controller.did, opts),
@@ -151,6 +152,7 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
 
     async mintDelegation(delegator, parent, subject, authorization, opts = {}) {
       const parentCap = parent.credentialSubject.authorization;
+      if (!isStructuredCapability(authorization)) throw new Error('mintDelegation: authorization must be structured (R5/AC-4)');
       // The one hard invariant is monotonic attenuation — a delegation can only narrow. Delegation itself is never
       // blocked: `parent.delegable === false` is advisory policy ("please don't"), honored by convention and left
       // in the chain for audit, but it does not prevent minting (blocking delegation is an anti-pattern — it forces
