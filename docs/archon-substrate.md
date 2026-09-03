@@ -2,7 +2,8 @@
 
 **Status:** foundational reference · the Archon identity model Sigil builds on. Sigil's credentials, relationships,
 and revocation are all expressed in these primitives; the design notes assume this model. Source: the
-[did:cid specification](https://archetech.com/didcid-specs).
+[did:cid specification](https://archetech.com/didcid-specs). For how each Sigil object decomposes into these
+primitives (and where a more native path exists), see [`archon-primitives.md`](archon-primitives.md).
 
 ## Operations — the whole grammar of change
 

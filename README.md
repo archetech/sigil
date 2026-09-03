@@ -153,7 +153,7 @@ src/
     transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
 test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol
 scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,didcomm}.ts (opt-in, live node)
-docs/                 substrate, presentation, agent-credential, DTG reconciliation, delegation, vocabulary, …
+docs/                 substrate, archon-primitives (object↔primitive map), presentation, agent-credential, delegation, invocation, trust-registry, …
 demo/                 interactive web app (Vite) — build a chain and verify it, offline or live
 Requirements/         actor-first requirements (start with sigil-v0-requirements.md)
 tools/trace/          the traceability-matrix generator
