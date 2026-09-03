@@ -142,6 +142,53 @@ export interface Presentation {
   readonly trust?: readonly TrustCredential[];
 }
 
+/**
+ * An **invocation**: the agent's committed *act* of exercising a capability, not merely a query about what is
+ * permitted. It is a presentation whose holder proof additionally binds the specific `action` and `resource`, so
+ * the act is non-repudiably attributable to the leaf agent (INV-1). Verified by `verifyInvocation`.
+ */
+export interface Invocation extends Presentation {
+  readonly action: string;
+  readonly resource: string;
+}
+
+/**
+ * A **receipt**: a resource server's signed acknowledgment of an invocation — the second half of an attributable
+ * record (INV-4). It references the invocation by its holder proof value and records the decision, so a third party
+ * can attribute the completed action to both the acting agent and (via the chain) the accountable principal.
+ */
+export interface Receipt {
+  /** The resource server DID that issued (and signed) this receipt. */
+  readonly server: string;
+  /** The invocation's holder `proof.proofValue` — a unique, verifiable reference to the exact invocation. */
+  readonly invocation: string;
+  readonly action: string;
+  readonly resource: string;
+  readonly audience: string;
+  readonly decision: 'accepted' | 'denied';
+  readonly assuranceLevel?: string;
+  /** ISO 8601 time the server acknowledged the invocation. */
+  readonly at: string;
+  readonly proof: Proof;
+}
+
+/** A completed invocation as an auditable artifact: the agent-signed act plus the optional server-signed receipt. */
+export interface InvocationRecord {
+  readonly invocation: Invocation;
+  readonly receipt?: Receipt;
+}
+
+/** The verifier's decision on an invocation record — the attribution it establishes (minimal disclosure, R11). */
+export interface RecordResult {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly assuranceLevel?: string;
+  /** The acting agent (the chain's holder-bound leaf). */
+  readonly actor?: string;
+  /** The accountable principal the authority descends from (the chain root's controller). */
+  readonly accountablePrincipal?: string;
+}
+
 /** What the verifier asks, plus the specific action being authorized. */
 export interface VerifyRequest {
   readonly nonce: string;

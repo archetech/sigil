@@ -2,32 +2,38 @@
  * The Sigil A2A exchange, as a small transport-agnostic protocol. It profiles present-and-verify onto a
  * request/response message flow that rides any `Transport` (DIDComm in production; in-memory in tests):
  *
- *   presenter → verifier :  request       { action, resource }
- *   verifier  → presenter:  challenge     { nonce, audience, action, resource, requireHumanCoSign }
- *   presenter → verifier :  presentation  { presentation }            ← built for the fresh challenge
- *   verifier  → presenter:  result        { ok, reason?, assuranceLevel? }
+ *   agent → verifier :  request       { action, resource }
+ *   verifier → agent :  challenge     { nonce, audience, action, resource, requireHumanCoSign }
+ *   agent → verifier :  presentation | invocation   ← built for the fresh challenge
+ *   verifier → agent :  result | receipt            ← authorization decision, or an acknowledged act
  *
- * The verifier owns the nonce (freshness) and correlates a presentation to the challenge it issued to that
- * counterparty. Verification itself is the same `verifyPresentation` — the protocol only moves the messages.
+ * A **presentation** asks "may I?" (authorization query); an **invocation** is the committed act "I hereby do A on
+ * R", which — when the verifier is a resource server with a key — comes back as a signed **receipt** (the second
+ * half of an attributable record). The verifier owns the nonce (freshness) and correlates a response to the
+ * challenge it issued that counterparty. Verification is the same `verifyPresentation` / `verifyInvocation`.
  *
- * @implements R14
+ * @implements R14, INV-2
  */
-import type { Presentation, VerifyDeps, VerifyResult } from './types.ts';
+import type { Presentation, Invocation, Receipt, VerifyDeps, VerifyResult } from './types.ts';
 import type { Transport, TransportMessage } from './transport.ts';
-import { verifyPresentation } from './verify.ts';
+import { verifyPresentation, verifyInvocation } from './verify.ts';
 
 const PROTO = 'https://sigil.archetech.com/1.0';
 export const MSG = {
   request: `${PROTO}/request`,
   challenge: `${PROTO}/challenge`,
   presentation: `${PROTO}/presentation`,
+  invocation: `${PROTO}/invocation`,
   result: `${PROTO}/result`,
+  receipt: `${PROTO}/receipt`,
 } as const;
 
 export interface RequestBody { readonly action: string; readonly resource: string; }
 export interface ChallengeBody { readonly nonce: string; readonly audience: string; readonly action: string; readonly resource: string; readonly requireHumanCoSign: boolean; }
 export interface PresentationBody { readonly presentation: Presentation; }
+export interface InvocationBody { readonly invocation: Invocation; }
 export type ResultBody = VerifyResult;
+export interface ReceiptBody { readonly result: VerifyResult; readonly receipt?: Receipt; }
 
 type Reply = { type: string; body: unknown };
 
@@ -37,30 +43,39 @@ export interface VerifierPolicy {
   /** Which actions demand a proof-of-human co-sign (AC-11). */
   readonly highConsequence?: (action: string) => boolean;
   readonly requiredAssurance?: string;
+  /** If set, the verifier is a resource server: on an accepted invocation it signs a receipt (INV-4). */
+  readonly issueReceipt?: (invocation: Invocation, result: VerifyResult) => Receipt;
 }
 
 /** A verifier's side of the exchange. Stateful: it remembers the challenge it issued to each counterparty. */
 export function createVerifier(deps: VerifyDeps, policy: VerifierPolicy, nonce: () => string) {
   const pending = new Map<string, { action: string; resource: string; nonce: string; requireHumanCoSign: boolean }>();
+  const request = (from: string, action: string, resource: string): Reply => {
+    const requireHumanCoSign = policy.highConsequence?.(action) ?? false;
+    const n = nonce();
+    pending.set(from, { action, resource, nonce: n, requireHumanCoSign });
+    return { type: MSG.challenge, body: { nonce: n, audience: policy.audience, action, resource, requireHumanCoSign } satisfies ChallengeBody };
+  };
   return {
     async handle(from: string | undefined, msg: TransportMessage): Promise<Reply | null> {
       if (!from) return null;
       if (msg.type === MSG.request) {
         const { action, resource } = msg.body as RequestBody;
-        const requireHumanCoSign = policy.highConsequence?.(action) ?? false;
-        const n = nonce();
-        pending.set(from, { action, resource, nonce: n, requireHumanCoSign });
-        return { type: MSG.challenge, body: { nonce: n, audience: policy.audience, action, resource, requireHumanCoSign } satisfies ChallengeBody };
+        return request(from, action, resource);
       }
-      if (msg.type === MSG.presentation) {
+      if (msg.type === MSG.presentation || msg.type === MSG.invocation) {
         const ch = pending.get(from);
         if (!ch) return { type: MSG.result, body: { ok: false, reason: 'no-challenge' } satisfies ResultBody };
         pending.delete(from);
-        const result = await verifyPresentation((msg.body as PresentationBody).presentation, {
-          nonce: ch.nonce, audience: policy.audience, action: ch.action, resource: ch.resource,
-          requireHumanCoSign: ch.requireHumanCoSign, requiredAssurance: policy.requiredAssurance,
-        }, deps);
-        return { type: MSG.result, body: result satisfies ResultBody };
+        const req = { nonce: ch.nonce, audience: policy.audience, action: ch.action, resource: ch.resource, requireHumanCoSign: ch.requireHumanCoSign, requiredAssurance: policy.requiredAssurance };
+        if (msg.type === MSG.presentation) {
+          const result = await verifyPresentation((msg.body as PresentationBody).presentation, req, deps);
+          return { type: MSG.result, body: result satisfies ResultBody };
+        }
+        const inv = (msg.body as InvocationBody).invocation;
+        const result = await verifyInvocation(inv, req, deps);
+        const receipt = result.ok && policy.issueReceipt ? policy.issueReceipt(inv, result) : undefined;
+        return { type: MSG.receipt, body: { result, ...(receipt ? { receipt } : {}) } satisfies ReceiptBody };
       }
       return null;
     },
@@ -76,6 +91,20 @@ export function createPresenter(build: (challenge: ChallengeBody) => Promise<Pre
         return { type: MSG.presentation, body: { presentation } satisfies PresentationBody };
       }
       return null; // a result is terminal — the caller reads it
+    },
+  };
+}
+
+/** An invoker's side: answer a challenge with an **invocation** — the committed act — built for its exact nonce.
+ *  The verifier replies with a receipt (a `result` + optional signed acknowledgment). @implements INV-1 */
+export function createInvoker(build: (challenge: ChallengeBody) => Promise<Invocation>) {
+  return {
+    async handle(_from: string | undefined, msg: TransportMessage): Promise<Reply | null> {
+      if (msg.type === MSG.challenge) {
+        const invocation = await build(msg.body as ChallengeBody);
+        return { type: MSG.invocation, body: { invocation } satisfies InvocationBody };
+      }
+      return null; // a receipt is terminal — the caller reads it
     },
   };
 }

@@ -9,8 +9,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import Cipher from '@didcid/cipher';
 
-import { createArchonIssuer, createArchonResolver, createArchonSignatureVerifier, inMemoryNetwork, createVerifier, createPresenter, requestAccess, pump, MSG } from '../src/index.ts';
-import type { ChallengeBody, ResultBody } from '../src/index.ts';
+import { createArchonIssuer, createArchonResolver, createArchonSignatureVerifier, inMemoryNetwork, createVerifier, createPresenter, createInvoker, verifyRecord, requestAccess, pump, MSG } from '../src/index.ts';
+import type { ChallengeBody, ResultBody, ReceiptBody } from '../src/index.ts';
 import { makeFakeGatekeeper } from './fake-gatekeeper.ts';
 
 const cipher = new Cipher();
@@ -83,4 +83,32 @@ test('remote exchange: a presentation with no prior challenge is refused', async
   await pump(vt, (f, m) => verifier.handle(f, m));
   const drained = await pt.receive();
   assert.equal((drained.find((m) => m.type === MSG.result)?.body as ResultBody).reason, 'no-challenge');
+});
+
+// @verifies INV-2, INV-4, R14
+test('remote invocation: the resource server accepts the act and returns a verifiable receipt', async () => {
+  const s = await setup();
+  const server = await s.issuer.mintAgent(); // the resource server's key, used to sign receipts (audience stays V)
+  const net = inMemoryNetwork();
+  const vt = net.transport(V);
+  const pt = net.transport(s.beta.did);
+  const verifier = createVerifier(s.deps, { audience: V, issueReceipt: (inv, r) => s.issuer.mintReceipt(server, inv, 'accepted', { assuranceLevel: r.assuranceLevel }) }, nonce);
+  let inv!: Awaited<ReturnType<typeof s.issuer.invoke>>;
+  const invoker = createInvoker(async (ch: ChallengeBody) => (inv = s.issuer.invoke(s.beta, { challenge: ch.nonce, audience: ch.audience, action: ch.action, resource: ch.resource, credentials: s.chain })));
+
+  await requestAccess(pt, V, { action: 'deploy', resource: 'svc:api' });
+  await pump(vt, (f, m) => verifier.handle(f, m)); // request → challenge
+  await pump(pt, (f, m) => invoker.handle(f, m)); // challenge → invocation (captured in `inv`)
+  await pump(vt, (f, m) => verifier.handle(f, m)); // invocation → receipt
+
+  const drained = await pt.receive();
+  const body = drained.find((m) => m.type === MSG.receipt)?.body as ReceiptBody;
+  assert.equal(body.result.ok, true);
+  assert.ok(body.receipt, 'a receipt was issued');
+
+  // The record re-verifies offline and attributes the act.
+  const rec = await verifyRecord({ invocation: inv, receipt: body.receipt }, s.deps);
+  assert.equal(rec.ok, true);
+  assert.equal(rec.actor, s.beta.did);
+  assert.equal(rec.accountablePrincipal, s.controller.did);
 });

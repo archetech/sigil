@@ -8,7 +8,7 @@
  * the signature primitive is behind `SignatureVerifier`. The logic here is what Sigil owns; the crypto and the
  * substrate are injected.
  */
-import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, Presentation, VerifyRequest, VerifyDeps, VerifyResult } from './types.ts';
+import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, Presentation, Invocation, Receipt, InvocationRecord, VerifyRequest, VerifyDeps, VerifyResult, RecordResult } from './types.ts';
 import { attenuates } from './capability.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
@@ -21,10 +21,13 @@ function meetsAssurance(actual: string, required: string): boolean {
   return a >= 0 && r >= 0 && a >= r;
 }
 
-/** The object a holder signs to bind a presentation to the challenge + audience. The `SignatureVerifier`
- *  canonicalizes it (JCS) as the substrate does — this returns the object, not pre-serialized bytes. */
+/** The object a holder signs. A presentation binds {holder, challenge, audience}; an **invocation** additionally
+ *  binds the specific {action, resource} it exercises, making it the agent's committed, attributable act (INV-1).
+ *  The `SignatureVerifier` canonicalizes it (JCS) as the substrate does — this returns the object, not bytes. */
 function holderSignedData(p: Presentation): unknown {
-  return { holder: p.holder, challenge: p.challenge, audience: p.audience };
+  const base = { holder: p.holder, challenge: p.challenge, audience: p.audience };
+  const inv = p as Partial<Invocation>;
+  return inv.action !== undefined && inv.resource !== undefined ? { ...base, action: inv.action, resource: inv.resource } : base;
 }
 /** The object a credential's issuer signs — the credential without its `proof`. */
 function credentialBody(c: AAC | VRC | TrustCredential): unknown {
@@ -144,6 +147,11 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
   const holderKey = await signerKeyAt(deps, p.proof, p.holder); // key state at signing time
   if (!holderKey || !(await deps.signatures.verify(holderSignedData(p), p.proof, holderKey))) return deny('holder-binding');
 
+  // Invocation binding — if this is an invocation, the act it COMMITTED to (signed) must be the one requested. The
+  // holder signature above already covered the action/resource; this ensures the committed act == the request. [INV-2]
+  const inv = p as Partial<Invocation>;
+  if (inv.action !== undefined && (inv.action !== req.action || inv.resource !== req.resource)) return deny('invocation-binding');
+
   // Root anchoring — parent must be null, and control established by the referenced DTG VRC.
   if ((root.credentialSubject.authorization.parent ?? null) !== null) return deny('root-anchoring');
   const anchored = await verifyRoot(root, deps);
@@ -208,4 +216,52 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
   if (req.requiredAssurance && !meetsAssurance(level, req.requiredAssurance)) return deny('assurance');
 
   return { ok: true, assuranceLevel: level };
+}
+
+/**
+ * Verify an **invocation** — the agent's committed act of exercising a capability. Identical to
+ * `verifyPresentation` (chain, holder binding, attenuation, revocation, assurance, optional co-sign) plus: the
+ * holder proof is bound over the specific `{action, resource}`, and that committed act must equal the request. A
+ * replay is refused by the same challenge/audience binding (no new server state — INV-3).
+ *
+ * @implements INV-1, INV-2, INV-3, INV-5
+ */
+export async function verifyInvocation(inv: Invocation, req: VerifyRequest, deps: VerifyDeps): Promise<VerifyResult> {
+  return verifyPresentation(inv, req, deps);
+}
+
+/**
+ * Verify an **invocation record** offline and return the attribution it establishes — the acting agent (leaf) and
+ * the accountable principal (root controller), from signatures + resolution alone (INV-4, R11). The reconstructed
+ * request comes from the invocation itself; a carried co-sign is checked. If a receipt is present, it must reference
+ * this exact invocation, agree on the act, and carry a valid signature by the named resource server.
+ *
+ * @implements INV-4
+ */
+export async function verifyRecord(record: InvocationRecord, deps: VerifyDeps): Promise<RecordResult> {
+  const inv = record.invocation;
+  const req: VerifyRequest = {
+    nonce: inv.challenge, audience: inv.audience, action: inv.action, resource: inv.resource,
+    requireHumanCoSign: inv.coSign !== undefined,
+  };
+  const res = await verifyInvocation(inv, req, deps);
+  if (!res.ok) return { ok: false, reason: res.reason };
+
+  const actor = inv.holder;
+  const accountablePrincipal = inv.credentials[0]?.issuer;
+
+  const r = record.receipt;
+  if (r) {
+    if (r.invocation !== inv.proof.proofValue) return { ok: false, reason: 'receipt-mismatch' };
+    if (r.action !== inv.action || r.resource !== inv.resource || r.audience !== inv.audience) return { ok: false, reason: 'receipt-mismatch' };
+    const key = await signerKeyAt(deps, r.proof, r.server);
+    if (!key || !(await deps.signatures.verify(receiptBody(r), r.proof, key))) return { ok: false, reason: 'receipt-signature' };
+  }
+  return { ok: true, assuranceLevel: res.assuranceLevel, actor, accountablePrincipal };
+}
+
+/** The object a resource server signs for a receipt — the receipt without its proof. */
+function receiptBody(r: Receipt): unknown {
+  const { proof: _proof, ...rest } = r;
+  return rest;
 }
