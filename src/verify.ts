@@ -111,7 +111,13 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
   if (!anchored.ok) return anchored;
 
   // Walk the chain root → leaf. Every hop: status (current, fail-closed) + validity. Non-root hops additionally:
-  // signature (at signing version), linkage to the parent, delegability of the parent, and monotonic attenuation.
+  // signature (at signing version), linkage to the parent, and monotonic attenuation.
+  //
+  // Note: there is NO hard "delegability" gate. Blocking delegation is an anti-pattern (Karp, "Blocking Delegation
+  // is an Anti-pattern") — it doesn't stop authority flowing onward, it only forces the *unaccountable* path
+  // (credential-sharing / proxying) instead of an accountable, attenuated grant. Authority is bounded by monotonic
+  // attenuation (a hop can never exceed its parent), the capability's constraints, and per-hop revocation; a
+  // parent's `authorization.delegable` is advisory policy surfaced for audit, never a verification gate. [DC-4]
   for (let i = 0; i < chain.length; i++) {
     const hop = chain[i];
     if (!hop) return deny('presentation-shape');
@@ -131,8 +137,6 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
       // Linkage — the delegator IS the parent's subject, and the hop references the parent. [DC-4, DC-2]
       if (hop.issuer !== parent.credentialSubject.id) return deny('chain-linkage');
       if ((hop.credentialSubject.authorization.parent ?? null) !== parent.id) return deny('chain-linkage');
-      // Delegability — the parent permitted delegation. [DC-4]
-      if (parent.credentialSubject.authorization.delegable !== true) return deny('not-delegable');
       // Attenuation — this hop only narrows its parent. [AC-8]
       if (!attenuates(hop.credentialSubject.authorization, parent.credentialSubject.authorization)) return deny('attenuation');
     }

@@ -94,7 +94,9 @@ A concrete `ldp_vc` (JSON-LD, W3C VCDM 2.0) example — the encoding that maps d
   - `actions` / `resources` — what may be done, to what. Namespaced strings and DIDs, not free text.
   - `constraints` — `audience` (which verifier(s) may accept it — binds the presentation target), plus caveats
     such as `maxInvocations`, `notAfter`, rate, or context limits.
-  - `delegable` — whether this authority may be sub-delegated at all.
+  - `delegable` — **advisory** delegation policy, not a hard gate: `false` means "please don't delegate onward",
+    honored by convention and kept in the chain for audit, but it never blocks a still-attenuating delegation or
+    its verification (blocking delegation is an anti-pattern — see [`delegation-chain.md`](delegation-chain.md) §5).
   - `parent` — for delegation chains: the capability this one narrows. `null` at the root (issued by the
     controller). A delegated AAC's `authorization` MUST be a subset of its `parent`'s (monotonic attenuation).
 - **`validFrom` / `validUntil`** — short-lived by default (minutes–hours), for lifecycle hygiene; re-issue rather

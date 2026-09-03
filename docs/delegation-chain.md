@@ -45,9 +45,9 @@ a requested action `A`/`R`, audience `V`, nonce `N`, the verifier confirms **all
    **as of when it signed** — resolve the issuer DID at the hop's signing version (`versionTime` / `versionId`; see
    [`archon-substrate.md`](archon-substrate.md)), by replaying its operation log, not by consulting the delegator.
    A later key rotation therefore never invalidates a validly-signed past delegation.
-5. **Delegability + attenuation** — each parent has `authorization.delegable == true`, and each
-   `AAC_i.authorization ⊆ AAC_{i-1}.authorization` (monotonic; see `agent-credential.md` AC-8). Any widening or a
-   non-delegable parent ⇒ deny.
+5. **Attenuation** — each `AAC_i.authorization ⊆ AAC_{i-1}.authorization` (monotonic; see `agent-credential.md`
+   AC-8). Any widening ⇒ deny. There is **no delegability gate**: a parent's `authorization.delegable` is advisory
+   policy carried for audit, not a block (see §5).
 6. **Authorization at the leaf** — `A`/`R` ∈ `AAC_leaf.authorization`, within all constraints (incl. `V ∈ audience`).
 7. **Validity + status** — every hop is within validity and its status (and the VRC's) resolves and is not
    revoked. **Any revoked hop ⇒ deny the whole chain**, fail-closed.
@@ -74,9 +74,30 @@ choices (VC + DTG + OID4VP), and the R8 property holds either way. *This resolve
 vs. linked ZCAP-LD" open item toward a VC-native, ZCAP-inspired chain; a future ZCAP-LD interop profile remains
 open.*
 
-## 5. Open items
+## 5. Delegation is not blocked — an anti-pattern avoided
 
-- **Chain length bounds** — cap depth / total credential size a verifier will accept (DoS + latency).
+Sigil deliberately has **no `do-not-delegate` gate, no depth cap for authority reasons, and no delegate-target
+restriction**. Blocking delegation is a security anti-pattern (A. Karp, *"Blocking Delegation is an Anti-pattern"*,
+IETF SPKI RFC 2693 being the classic offender): a hard block does not stop authority reaching a sub-agent — the
+holder can always **proxy** (act on the sub-agent's behalf with its own key) — it only makes that onward use
+*unaccountable*, couples availability to the holder, and defeats least-privilege (the holder's *full* authority is
+exercised, not the sub-agent's slice). It also breaks encapsulation: the issuer would have to predict the future
+org/task shape to set a correct limit.
+
+Sigil bounds authority the accountable way instead:
+
+- **Monotonic attenuation** (`AC-8`) — a delegation can only *narrow*; onward delegation never grants more.
+- **Constraints** — `audience`, `notAfter`, `maxInvocations` ride the capability and attenuate with it.
+- **Per-hop revocation** + the **audit chain** (`R11`) — every hop is attributable and independently killable.
+- **`delegable` is advisory** — `false` means "please don't delegate onward"; it is honored by convention and left
+  in the chain for audit, but is never a verification or issuance gate. (A richer signed `delegationPolicy` — and
+  the "guide, don't block → request justification → log → refine" control-plane loop — is a future extension.)
+
+## 6. Open items
+
+- **Chain length bounds** — a verifier MAY cap depth / total credential size, but strictly as a **resource / DoS
+  control, never an authorization control** (a depth limit is not a security boundary — see §5); keep any cap
+  generous and policy-driven.
 - **Cross-method chains** — hops on different DID methods (`did:web` delegating to `did:cid`); resolution is
   method-agnostic (per `presentation-model.md` §5), but confirm signature interop across the chain.
 - **Presentation encoding** — how the ordered chain rides one VP token (an array in the `vp_token` / DIDComm
@@ -88,6 +109,7 @@ open.*
 - `[D-DC-1 → DC-1, R8]` §2 — offline chain verification; no live delegator contact.
 - `[D-DC-2 → DC-2]` §2 — the complete ordered chain is presented (missing hop ⇒ deny).
 - `[D-DC-3 → DC-3]` §3 — root anchored to the controller/VRC; leaf holder-bound.
-- `[D-DC-4 → DC-4, R6]` §2 — linkage + delegability (each hop issued by its parent's subject; parent permitted it).
+- `[D-DC-4 → DC-4, R6]` §2, §5 — linkage (each hop issued by its parent's subject, referencing the parent); no
+  delegability block (`delegable` is advisory, not a gate).
 - `[D-DC-5 → DC-5, R8]` §2 — verify each hop against the signer's key state at its signing version (point-in-time
   resolution); revocation checked current.

@@ -144,7 +144,10 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
 
     async mintDelegation(delegator, parent, subject, authorization, opts = {}) {
       const parentCap = parent.credentialSubject.authorization;
-      if (parentCap.delegable !== true) throw new Error('mintDelegation: parent capability is not delegable');
+      // The one hard invariant is monotonic attenuation — a delegation can only narrow. Delegation itself is never
+      // blocked: `parent.delegable === false` is advisory policy ("please don't"), honored by convention and left
+      // in the chain for audit, but it does not prevent minting (blocking delegation is an anti-pattern — it forces
+      // the unaccountable proxy path instead of an accountable, attenuated grant).
       if (!attenuates(authorization, parentCap)) throw new Error('mintDelegation: authorization widens its parent');
       // A delegated AAC: issued by the delegator (the parent's subject), pinned to the parent, no VRC of its own.
       return mintAacAsset(delegator, (did) => ({

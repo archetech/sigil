@@ -39,6 +39,10 @@ export interface Capability {
     readonly notAfter?: string;
     readonly maxInvocations?: number;
   };
+  /** Advisory delegation policy, NOT a hard gate. `false` = "please don't delegate onward"; it is honored by
+   *  convention and left in the chain for audit, but it never blocks a (still-attenuating) delegation or its
+   *  verification — blocking delegation is an anti-pattern (it forces the unaccountable proxy path). Authority is
+   *  bounded by monotonic attenuation, `constraints`, and per-hop revocation, not by refusing to delegate. */
   readonly delegable?: boolean;
   /** For delegation chains: the parent capability this one narrows. `null` at the root. */
   readonly parent?: string | null;

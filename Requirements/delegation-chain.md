@@ -24,12 +24,17 @@ the controller, or whose leaf is not the presenter, MUST be denied.
 · **Verify:** a chain whose root is not controller/VRC-anchored, or whose leaf subject ≠ the holder-bound
 presenter, is denied.
 
-**DC-4** — For each hop the verifier MUST confirm **linkage and delegability**: the hop's `issuer` equals its
-parent's subject, it references the parent capability, and the parent's `authorization.delegable` is true. A hop
-issued by a party other than the parent's subject, or delegated from a non-delegable parent, MUST be denied.
+**DC-4** — For each hop the verifier MUST confirm **linkage**: the hop's `issuer` equals its parent's subject and
+it references the parent capability. A hop issued by a party other than the parent's subject MUST be denied. The
+verifier MUST NOT block delegation as such: a parent's `authorization.delegable` is **advisory policy** (surfaced
+for audit), never a verification gate — onward authority is bounded by monotonic attenuation (`AC-8`), the
+capability's `constraints`, and per-hop revocation, not by refusing to delegate. *(Rationale: blocking delegation
+is an anti-pattern — a hard `do-not-delegate` flag does not stop authority flowing onward, it only forces the
+unaccountable proxy/credential-sharing path in place of an accountable, attenuated grant. Cf. A. Karp, "Blocking
+Delegation is an Anti-pattern".)*
 · Actor: Verifier · Traces: R6, AC-8 · docs §2
-· **Verify:** a hop whose issuer is not the parent's subject is denied; delegating from a capability with
-`delegable: false` is denied.
+· **Verify:** a hop whose issuer is not the parent's subject is denied; a hop delegated from a `delegable: false`
+parent that still attenuates is **accepted** (the flag is advisory, not a block).
 
 **DC-5** — For each hop the verifier MUST verify the issuer's signature against the issuer's key state **as of when
 the hop was signed** (resolving the delegator DID at the hop's signing version — `versionTime` / `versionId`), so

@@ -90,12 +90,24 @@ test('revoking a mid-chain hop denies the whole chain, fail-closed', async () =>
   assert.equal((await verifyPresentation(pres, req, deps)).reason, 'revoked');
 });
 
-// @verifies AC-8, DC-4
-test('issuance refuses widening and non-delegable parents', async () => {
-  const { issuer, controller, a0, a1, vrc, root } = await chainWorld();
+// @verifies AC-8
+test('issuance refuses widening (the one hard invariant)', async () => {
+  const { issuer, a0, a1, root } = await chainWorld();
   await assert.rejects(() => issuer.mintDelegation(a0, root.credential, a1.did, { ...ROOT, actions: ['read', 'write', 'delete'] }), /widens/);
-  const rootND = await issuer.mintAuthorization(controller, a0.did, vrc.did, { ...ROOT, delegable: false });
-  await assert.rejects(() => issuer.mintDelegation(a0, rootND.credential, a1.did, MID), /not delegable/);
+});
+
+// @verifies DC-4
+// Blocking delegation is an anti-pattern: a `delegable: false` parent is advisory, not a gate. Delegating from it
+// is permitted (as long as it still attenuates), and the resulting chain VERIFIES — bounded by attenuation +
+// revocation, not by refusing to delegate.
+test('delegation from a `delegable: false` parent is permitted and verifies', async () => {
+  const { issuer, deps, controller, a0, a1, a2, vrc } = await chainWorld();
+  const rootND = await issuer.mintAuthorization(controller, a0.did, vrc.did, { ...ROOT, delegable: false }, { assuranceLevel: 'controller-vouched' });
+  const d1 = await issuer.mintDelegation(a0, rootND.credential, a1.did, MID); // not blocked
+  const d2 = await issuer.mintDelegation(a1, d1.credential, a2.did, LEAF);
+  const pres = issuer.present(a2, { challenge: 'n', audience: V, credentials: [rootND.credential, d1.credential, d2.credential] });
+  const res = await verifyPresentation(pres, { nonce: 'n', audience: V, action: 'read', resource: 'res:a' }, deps);
+  assert.deepEqual(res, { ok: true, assuranceLevel: 'controller-vouched' });
 });
 
 // @verifies AC-8
