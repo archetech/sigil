@@ -8,7 +8,7 @@
  * the signature primitive is behind `SignatureVerifier`. The logic here is what Sigil owns; the crypto and the
  * substrate are injected.
  */
-import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, Presentation, Invocation, Receipt, InvocationRecord, VerifyRequest, VerifyDeps, VerifyResult, RecordResult } from './types.ts';
+import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, PersonaLink, PersonaResult, Presentation, Invocation, Receipt, InvocationRecord, VerifyRequest, VerifyDeps, VerifyResult, RecordResult } from './types.ts';
 import { attenuates, isStructuredCapability } from './capability.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
@@ -265,5 +265,29 @@ export async function verifyRecord(record: InvocationRecord, deps: VerifyDeps): 
 /** The object a resource server signs for a receipt — the receipt without its proof. */
 function receiptBody(r: Receipt): unknown {
   const { proof: _proof, ...rest } = r;
+  return rest;
+}
+
+/**
+ * Unmask a **persona** — the with-cause attribution path (PW-3, PW-4). Given a persona-link (DTG VPC), return the
+ * canonical agent it binds to **iff** the link is signed by that canonical agent (so it cannot be forged or
+ * repudiated), is well-formed, and is not revoked. Fails closed otherwise — never returns a canonical it can't
+ * prove. This is used out-of-band by an auditor/principal who holds the link; it is never part of verification.
+ *
+ * @implements PW-3, PW-4
+ */
+export async function verifyPersonaLink(link: PersonaLink, deps: VerifyDeps): Promise<PersonaResult> {
+  const persona = link.credentialSubject?.id;
+  const canonical = link.issuer;
+  if (typeof persona !== 'string' || typeof canonical !== 'string') return { ok: false, reason: 'malformed' };
+  const status = await deps.resolver.resolve(link.id);          // the VPC must resolve and not be revoked
+  if (!status || status.deactivated) return { ok: false, reason: 'revoked' };
+  const key = await signerKeyAt(deps, link.proof, canonical);   // signed by the canonical agent, point-in-time
+  if (!key || !(await deps.signatures.verify(personaBody(link), link.proof, key))) return { ok: false, reason: 'signature' };
+  return { ok: true, persona, canonical };
+}
+/** The object the canonical agent signs for a persona-link — the link without its proof. */
+function personaBody(l: PersonaLink): unknown {
+  const { proof: _proof, ...rest } = l;
   return rest;
 }

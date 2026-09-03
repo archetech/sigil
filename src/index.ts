@@ -1,5 +1,5 @@
 /** Sigil reference implementation — public surface. */
-export { verifyPresentation, verifyInvocation, verifyRecord } from './verify.ts';
+export { verifyPresentation, verifyInvocation, verifyRecord, verifyPersonaLink } from './verify.ts';
 
 // Live Archon adapters for the two seams (resolution + crypto). Inject these to run against a real node.
 export { createArchonResolver } from './archon/resolver.ts';
@@ -31,6 +31,8 @@ export type {
   CoSign,
   TrustCredential,
   TrustPolicy,
+  PersonaLink,
+  PersonaResult,
   Presentation,
   Invocation,
   Receipt,

@@ -98,6 +98,30 @@ export interface TrustCredential {
   readonly proof: Proof;
 }
 
+/**
+ * A **persona-link** — a DTG **VPC** (Verifiable Persona Credential). Signed by the *canonical* agent, it binds a
+ * throwaway **persona** DID to that canonical identity. It is the **with-cause** recovery path for correlation
+ * resistance (R12): it is NOT carried in a presentation (disclosed existence-only / out-of-band), so it never lets
+ * a verifier correlate — only a party that holds it can unmask `persona → canonical` for accountability.
+ */
+export interface PersonaLink {
+  readonly id: string;
+  readonly type: readonly string[];
+  /** The canonical agent — the persona's real controller, and the signer. */
+  readonly issuer: string;
+  /** The persona DID. */
+  readonly credentialSubject: { readonly id: string };
+  readonly proof: Proof;
+}
+
+/** The result of unmasking a persona-link: the persona and (with a valid link) the canonical agent behind it. */
+export interface PersonaResult {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly persona?: string;
+  readonly canonical?: string;
+}
+
 /** A verifier's root-of-trust policy: the anchors whose trust credentials it honors, and issuers it pins a priori. */
 export interface TrustPolicy {
   /** DIDs the verifier trusts as endorsers / witnesses / registries — the anchors trust evidence must be signed by. */
