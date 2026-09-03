@@ -14,9 +14,9 @@
  *   - `present`           — a holder-signed presentation binding {holder, challenge, audience}.
  *   - `revoke`            — a `delete` operation (irreversible), for teardown or real revocation.
  *
- * @implements R1, R3, R6, AC-3, AC-11, TR-3
+ * @implements R1, R3, R6, AC-3, AC-11, TR-3, INV-1, INV-4
  */
-import type { AAC, VRC, Capability, CoSign, TrustCredential, Presentation, Proof, Jwk } from '../types.ts';
+import type { AAC, VRC, Capability, CoSign, TrustCredential, Presentation, Invocation, Receipt, Proof, Jwk } from '../types.ts';
 import { attenuates } from '../capability.ts';
 import { hexToBase64url } from '../base64url.ts';
 
@@ -73,6 +73,10 @@ export interface ArchonIssuer {
     opts?: { validFrom?: string; validUntil?: string; assuranceLevel?: string },
   ): Promise<{ did: string; credential: AAC }>;
   present(holder: Signer, opts: { challenge: string; audience: string; credentials: readonly AAC[]; trust?: readonly TrustCredential[] }): Presentation;
+  /** The leaf agent invokes a capability — a committed, attributable act binding the specific action/resource. */
+  invoke(holder: Signer, opts: { challenge: string; audience: string; action: string; resource: string; credentials: readonly AAC[]; trust?: readonly TrustCredential[]; coSign?: CoSign }): Invocation;
+  /** A resource server signs a receipt acknowledging an invocation — the second half of an attributable record. */
+  mintReceipt(server: Signer, invocation: Invocation, decision: 'accepted' | 'denied', opts?: { assuranceLevel?: string; at?: string }): Receipt;
   /** The accountable principal freshly co-signs a specific high-consequence request — a proof-of-human step-up. */
   coSign(authorizer: Signer, req: { challenge: string; audience: string; action: string; resource: string }): CoSign;
   /** An anchor (endorser / witness / registry) vouches for a controller — a DTG trust-graph credential (TR-3).
@@ -162,6 +166,23 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
     present(holder, { challenge, audience, credentials, trust }) {
       const { proof } = signed({ holder: holder.did, challenge, audience }, holder.privateJwk, vm(holder.did));
       return { holder: holder.did, challenge, audience, credentials, proof, ...(trust ? { trust } : {}) };
+    },
+
+    invoke(holder, { challenge, audience, action, resource, credentials, trust, coSign }) {
+      // The holder signs the specific act — {holder, challenge, audience, action, resource} — so the invocation is
+      // non-repudiably attributable to the leaf agent, not a permission query.
+      const { proof } = signed({ holder: holder.did, challenge, audience, action, resource }, holder.privateJwk, vm(holder.did));
+      return { holder: holder.did, challenge, audience, action, resource, credentials, proof, ...(trust ? { trust } : {}), ...(coSign ? { coSign } : {}) };
+    },
+
+    mintReceipt(server, invocation, decision, opts = {}) {
+      const body = {
+        server: server.did, invocation: invocation.proof.proofValue,
+        action: invocation.action, resource: invocation.resource, audience: invocation.audience,
+        decision, ...(opts.assuranceLevel ? { assuranceLevel: opts.assuranceLevel } : {}), at: opts.at ?? now(),
+      };
+      const { proof } = signed(body, server.privateJwk, vm(server.did));
+      return { ...body, proof };
     },
 
     coSign(authorizer, { challenge, audience, action, resource }) {

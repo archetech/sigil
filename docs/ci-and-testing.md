@@ -35,9 +35,12 @@ Two tiers, kept separate so CI stays hermetic:
   **whole anchor** (mint a controller + agent + VRC + AAC, present, verify, revoke). `e2e:delegate` runs a
   **multi-hop chain** (controller → a0 → a1 → a2, walked root→leaf with every delegator offline). `e2e:stepup` runs
   **human step-up** (a high-consequence action denied without a co-sign, accepted at `human-co-signed` with the
-  principal's co-sign). `e2e:didcomm` runs the **whole exchange over real DIDComm mailboxes** (request → challenge →
-  presentation → result between two wire identities) — it additionally needs `SIGIL_KEYMASTER_URL` pointing at a
-  **keymaster REST service** (the DIDComm wallet). All are configured entirely by environment (see
+  principal's co-sign). `e2e:invoke` runs the **invocation verb** (β
+  invokes a capability, the resource server signs a receipt, the record re-verifies and attributes the act; plus
+  out-of-scope and high-consequence cases). `e2e:didcomm` runs the **whole exchange over real DIDComm mailboxes**
+  (request → challenge → presentation → result between two wire identities) — it additionally needs
+  `SIGIL_KEYMASTER_URL` pointing at a **keymaster REST service** (the DIDComm wallet). All are configured entirely
+  by environment (see
   [`../.env.example`](../.env.example)) — no hostname or secret is committed; `SIGIL_GATEKEEPER_URL` defaults to a
   public node.
 

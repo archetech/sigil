@@ -16,7 +16,8 @@
     "e2e:prove": "node --experimental-strip-types scripts/e2e-archon-prove.ts",
     "e2e:delegate": "node --experimental-strip-types scripts/e2e-archon-delegate.ts",
     "e2e:stepup": "node --experimental-strip-types scripts/e2e-archon-stepup.ts",
-    "e2e:didcomm": "node --experimental-strip-types scripts/e2e-archon-didcomm.ts"
+    "e2e:didcomm": "node --experimental-strip-types scripts/e2e-archon-didcomm.ts",
+    "e2e:invoke": "node --experimental-strip-types scripts/e2e-archon-invoke.ts"
   },
   "devDependencies": {
     "@types/node": "^22",

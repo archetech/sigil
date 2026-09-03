@@ -56,6 +56,10 @@ standing permission. Three layers:
 - **Delegation** — authority passes agent→agent as a **multi-hop chain** of AACs that only *narrow* (monotonic
   attenuation); the verifier walks it root→leaf offline, contacting no delegator. See
   [`docs/delegation-chain.md`](docs/delegation-chain.md).
+- **Invocation** — an agent *exercises* a capability as a signed, committed act, and a resource server returns a
+  signed **receipt**; the invocation + receipt is an **attributable record** a third party can re-verify offline to
+  attribute the action to the acting agent and the accountable principal. Completes the ocap lifecycle
+  **mint → delegate → invoke → revoke**. See [`docs/invocation.md`](docs/invocation.md).
 - **A2A exchange** — present-and-verify as a transport-agnostic protocol (request → challenge → presentation →
   result) that rides **Archon DIDComm** mailboxes, so two agents that have never met collaborate by DID. See the
   DIDComm profile in [`docs/presentation-model.md`](docs/presentation-model.md).
@@ -138,17 +142,17 @@ cd demo && npm install && npm run dev
 src/
   index.ts            public surface
   types.ts            AAC / VRC / Presentation / the Resolver + SignatureVerifier seams
-  verify.ts           verifyPresentation — the chain-walking verifier (keyless); derives assurance
+  verify.ts           verifyPresentation / verifyInvocation / verifyRecord (keyless); derives assurance
   capability.ts       attenuates — the monotonic-attenuation rule (AC-8), shared by issuer + verifier
   transport.ts        the Transport seam + an in-memory network (offline)
-  protocol.ts         the A2A exchange: request → challenge → presentation → result
+  protocol.ts         the A2A exchange: request → challenge → presentation|invocation → result|receipt
   archon/
     resolver.ts       createArchonResolver        — gatekeeper resolution (replay, point-in-time)
     signatures.ts     createArchonSignatureVerifier — @didcid/cipher (JCS + ECDSA secp256k1)
-    issuer.ts         createArchonIssuer          — self-custodied mint / delegate / present / revoke
+    issuer.ts         createArchonIssuer          — self-custodied mint / delegate / invoke / receipt / revoke
     transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
-test/                 node:test — verify · archon (real crypto) · issuer · delegation · step-up · protocol
-scripts/              e2e-archon-{resolve,prove,delegate,stepup,didcomm}.ts (opt-in, live node)
+test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol
+scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,didcomm}.ts (opt-in, live node)
 docs/                 substrate, presentation, agent-credential, DTG reconciliation, delegation, vocabulary, …
 demo/                 interactive web app (Vite) — build a chain and verify it, offline or live
 Requirements/         actor-first requirements (start with sigil-v0-requirements.md)
