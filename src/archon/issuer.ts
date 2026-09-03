@@ -28,6 +28,8 @@ export interface Signer {
   readonly did: string;
   readonly publicJwk: Jwk;
   readonly privateJwk: PrivateJwk;
+  /** The HD derivation index this identity's key came from — present only in seed (HD) mode; enables recovery. */
+  readonly index?: number;
 }
 
 /** The gatekeeper operations the issuer submits. A `@didcid/clients` `GatekeeperClient` satisfies this. */
@@ -39,11 +41,18 @@ export interface IssuerGatekeeper {
   resolveDID(did: string, options?: unknown): Promise<{ didDocumentMetadata?: { versionId?: string } }>;
 }
 
+/** A key derived from an HD seed at a path. `@didcid/cipher`'s `generateHDKey(mnemonic).derive(path)` satisfies it. */
+export interface HDKey { derive(path: string): { privateKey: Uint8Array | null }; }
+
 /** The cipher primitives the issuer signs with. A `@didcid/cipher` instance satisfies this. */
 export interface IssuerCipher {
   generateRandomJwk(): { publicJwk: Jwk; privateJwk: PrivateJwk };
   hashJSON(obj: unknown): string;
   signHash(msgHash: string, privateJwk: PrivateJwk): string;
+  /** HD-seed key management (the same primitives the Keymaster uses). Optional — absent ⇒ random-key mode only. */
+  generateHDKey?(mnemonic: string): HDKey;
+  generateJwk?(privateKeyBytes: Uint8Array): { publicJwk: Jwk; privateJwk: PrivateJwk };
+  generateMnemonic?(): string;
 }
 
 export interface IssuerOptions {
@@ -51,9 +60,18 @@ export interface IssuerOptions {
   readonly registry?: string;
   /** Injectable clock, for deterministic tests. */
   readonly now?: () => string;
+  /** A BIP-39 mnemonic to seed HD key derivation — every minted identity's key is then derived from it and is
+   *  **recoverable** (same seed + index ⇒ same key), like the Keymaster's HD wallet. Omit for random keys. */
+  readonly mnemonic?: string;
 }
 
 export interface ArchonIssuer {
+  /** The HD seed backing this issuer, if it was created in seed mode — save it to recover keys. `undefined` in
+   *  random-key mode. */
+  readonly mnemonic?: string;
+  /** Re-derive the signer for an already-anchored DID from the seed + its `index` (seed mode only). Recovers the
+   *  ability to sign for `did` — the DID string itself must be supplied (the caller/registry records index → did). */
+  recover(index: number, did: string): Signer;
   mintAgent(): Promise<Signer>;
   mintRelationship(controller: Signer, subject: string): Promise<{ did: string; credential: VRC }>;
   mintAuthorization(
@@ -94,6 +112,19 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
   const blockid = async (): Promise<string | undefined> => (await gatekeeper.getBlock(registry))?.hash;
   const toB64Url = hexToBase64url;
 
+  // Seed (HD) mode: if a mnemonic is given, every key is derived from it at an incrementing index and is
+  // recoverable (same seed + index ⇒ same key) — exactly as the Keymaster derives its wallet IDs. The next-index
+  // counter is in-memory; a caller wanting a durable HD wallet persists it (and the index→did map) alongside the seed.
+  const mnemonic = options.mnemonic;
+  let nextIndex = 0;
+  /** Derive a keypair from the seed at `index` (the same BIP-44 path the Keymaster uses). */
+  const deriveKeypair = (index: number): { publicJwk: Jwk; privateJwk: PrivateJwk } => {
+    if (!mnemonic || !cipher.generateHDKey || !cipher.generateJwk) throw new Error('issuer: HD recovery needs a mnemonic and an HD-capable cipher');
+    const node = cipher.generateHDKey(mnemonic).derive(`m/44'/0'/${index}'/0/0`);
+    if (!node.privateKey) throw new Error('issuer: HD derivation produced no key');
+    return cipher.generateJwk(node.privateKey);
+  };
+
   /** Attach an `EcdsaSecp256k1Signature2019` proof over the JCS hash of `obj` (which must exclude any proof). */
   function signed<T extends object>(obj: T, privateJwk: PrivateJwk, verificationMethod: string): T & { proof: Proof } {
     const proofValue = toB64Url(cipher.signHash(cipher.hashJSON(obj), privateJwk));
@@ -126,14 +157,23 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
   const withAssurance = (level?: string) => (level ? { assuranceLevel: level } : {});
 
   async function mintAgentSigner(): Promise<Signer> {
-    const { publicJwk, privateJwk } = cipher.generateRandomJwk();
+    // Seed mode → derive (recoverable); otherwise a fresh random key. Same anchoring either way.
+    const index = mnemonic ? nextIndex++ : undefined;
+    const { publicJwk, privateJwk } = index !== undefined ? deriveKeypair(index) : cipher.generateRandomJwk();
     const op = { type: 'create', created: now(), blockid: await blockid(), registration: { version: 1, type: 'agent', registry }, publicJwk };
     // A create operation is self-signed by the new key; its DID does not exist yet, so the vm is the bare fragment.
     const did = await gatekeeper.createDID(signed(op, privateJwk, '#key-1'));
-    return { did, publicJwk, privateJwk };
+    return { did, publicJwk, privateJwk, ...(index !== undefined ? { index } : {}) };
   }
 
   return {
+    mnemonic,
+
+    recover(index, did) {
+      const { publicJwk, privateJwk } = deriveKeypair(index);
+      return { did, publicJwk, privateJwk, index };
+    },
+
     async mintAgent() {
       return mintAgentSigner();
     },

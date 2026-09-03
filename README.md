@@ -152,7 +152,7 @@ src/
   archon/
     resolver.ts       createArchonResolver        — gatekeeper resolution (replay, point-in-time)
     signatures.ts     createArchonSignatureVerifier — @didcid/cipher (JCS + ECDSA secp256k1)
-    issuer.ts         createArchonIssuer          — mint / delegate / invoke / receipt / persona / revoke (self-custodied)
+    issuer.ts         createArchonIssuer          — mint / delegate / invoke / receipt / persona / revoke; self-custodied, optional HD-seed recovery
     transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
 test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol
 scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,didcomm}.ts (opt-in, live node)

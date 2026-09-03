@@ -95,6 +95,22 @@ agent or the resource server anchors the record), keeping the transient path for
 
 **4. `capabilityInvocation` proof purpose.** Adopt it (above), or keep `authentication`?
 
+**5. Key custody: HD-seed recovery (done), and a Keymaster-backed signer (blocked upstream).**
+The issuer now supports **HD-seed key derivation** (`createArchonIssuer(gk, cipher, { mnemonic })`): every identity
+— agents *and* personas — derives from one BIP-39 seed at an incrementing path (`m/44'/0'/${index}'/0/0`), exactly
+as the Keymaster derives its wallet IDs, so keys are **recoverable** (`recover(index, did)`). This closes the
+recoverability gap for the many-identity persona case using the same `@didcid/cipher` HD primitives — no Keymaster
+required. Random keys remain the default for tests/portability.
+
+A **fully Keymaster-backed signer** (keys never leave the wallet) is the production ideal, but it is **blocked
+upstream**: the `KeymasterClient` exposes no generic *"sign this object as this DID"* verb — only `createId`,
+`createResponse`, `issueCredential`, and `encryptJSON`. It can mint HD-recoverable identities and revoke, but it
+cannot sign Sigil's arbitrary capability objects (AACs, invocations, co-signs, receipts) without extracting the key
+(defeating custody) or adopting the native encrypted-credential model (question 1). **The concrete ask:** a
+Keymaster `sign(object, asDID, proofPurpose)` primitive (ideally emitting `capabilityInvocation` for invocations)
+would make Sigil natively Keymaster-backed with no key ever leaving the wallet — the cleanest realization of the
+"peer that the Keymaster can grow to speak" relationship.
+
 ## What Sigil deliberately does not touch
 
 Archon offers much more — **groups, polls, vaults, dmail, lightning, nostr, image/file assets**. Sigil uses none of
