@@ -25,7 +25,9 @@ chain), so:
   (PW-2).
 
 `mintPersona(canonical)` returns a fresh persona `Signer` (usable anywhere the agent would be — a leaf subject, a
-presenter, an invoker) plus the persona-link below.
+presenter, an invoker) plus the persona-link below. When the issuer is seeded (`{ mnemonic }`), a persona's key is
+**HD-derived and recoverable** — the same seed backs every persona, so the many-identities-per-relationship pattern
+does not become a key-custody sprawl (see [`archon-primitives.md`](archon-primitives.md) §Open-questions-5).
 
 ## 3. The persona-link (VPC) — with-cause attribution
 
