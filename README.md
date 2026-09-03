@@ -66,6 +66,9 @@ standing permission. Three layers:
 - **Trust levels** — the verifier *derives* an assurance level from what it can prove, and raises it from a
   decentralized **trust graph** (DTG endorsement / witness / membership from anchors it trusts) rather than a
   central list. See [`docs/trust-registry.md`](docs/trust-registry.md).
+- **Correlation resistance** — an agent acts under a **persona** (a fresh DID per relationship), so counterparties
+  can't correlate it; a signed persona-link (DTG VPC), kept out-of-band, is the *with-cause* recovery path. See
+  [`docs/pairwise.md`](docs/pairwise.md).
 
 Everything rests on the Archon substrate — resolution is operation-log **replay**, revocation is a `delete`, and
 each signature is verified point-in-time against the signer's key state when it signed. See
@@ -149,7 +152,7 @@ src/
   archon/
     resolver.ts       createArchonResolver        — gatekeeper resolution (replay, point-in-time)
     signatures.ts     createArchonSignatureVerifier — @didcid/cipher (JCS + ECDSA secp256k1)
-    issuer.ts         createArchonIssuer          — self-custodied mint / delegate / invoke / receipt / revoke
+    issuer.ts         createArchonIssuer          — mint / delegate / invoke / receipt / persona / revoke (self-custodied)
     transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
 test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol
 scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,didcomm}.ts (opt-in, live node)

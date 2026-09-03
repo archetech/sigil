@@ -14,9 +14,9 @@
  *   - `present`           — a holder-signed presentation binding {holder, challenge, audience}.
  *   - `revoke`            — a `delete` operation (irreversible), for teardown or real revocation.
  *
- * @implements R1, R3, R6, AC-3, AC-11, TR-3, INV-1, INV-4
+ * @implements R1, R3, R6, AC-3, AC-11, TR-3, INV-1, INV-4, PW-1, PW-2, PW-3
  */
-import type { AAC, VRC, Capability, CoSign, TrustCredential, Presentation, Invocation, Receipt, Proof, Jwk } from '../types.ts';
+import type { AAC, VRC, Capability, CoSign, TrustCredential, PersonaLink, Presentation, Invocation, Receipt, Proof, Jwk } from '../types.ts';
 import { attenuates, isStructuredCapability } from '../capability.ts';
 import { hexToBase64url } from '../base64url.ts';
 
@@ -82,6 +82,9 @@ export interface ArchonIssuer {
   /** An anchor (endorser / witness / registry) vouches for a controller — a DTG trust-graph credential (TR-3).
    *  `kind`: 'endorsement' (VEC) / 'witness' (VWC) / 'membership' (VMC). Minted as the endorser's asset. */
   mintEndorsement(endorser: Signer, controllerDid: string, kind: 'endorsement' | 'witness' | 'membership'): Promise<{ did: string; credential: TrustCredential }>;
+  /** Mint a **persona** for `canonical`: a fresh standalone agent DID to act under, plus a signed persona-link
+   *  (DTG VPC) that privately binds persona → canonical for with-cause attribution (PW-1, PW-3). */
+  mintPersona(canonical: Signer): Promise<{ persona: Signer; link: PersonaLink }>;
   revoke(did: string, controller: Signer): Promise<boolean>;
 }
 
@@ -122,13 +125,17 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
   });
   const withAssurance = (level?: string) => (level ? { assuranceLevel: level } : {});
 
+  async function mintAgentSigner(): Promise<Signer> {
+    const { publicJwk, privateJwk } = cipher.generateRandomJwk();
+    const op = { type: 'create', created: now(), blockid: await blockid(), registration: { version: 1, type: 'agent', registry }, publicJwk };
+    // A create operation is self-signed by the new key; its DID does not exist yet, so the vm is the bare fragment.
+    const did = await gatekeeper.createDID(signed(op, privateJwk, '#key-1'));
+    return { did, publicJwk, privateJwk };
+  }
+
   return {
     async mintAgent() {
-      const { publicJwk, privateJwk } = cipher.generateRandomJwk();
-      const op = { type: 'create', created: now(), blockid: await blockid(), registration: { version: 1, type: 'agent', registry }, publicJwk };
-      // A create operation is self-signed by the new key; its DID does not exist yet, so the vm is the bare fragment.
-      const did = await gatekeeper.createDID(signed(op, privateJwk, '#key-1'));
-      return { did, publicJwk, privateJwk };
+      return mintAgentSigner();
     },
 
     async mintRelationship(controller, subject) {
@@ -205,6 +212,22 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
       const updateOp = { type: 'update', did, previd: current.didDocumentMetadata?.versionId, blockid: await blockid(), doc };
       await gatekeeper.updateDID(signed(updateOp, endorser.privateJwk, vm(endorser.did)));
       return { did, credential };
+    },
+
+    async mintPersona(canonical) {
+      // A persona is a fresh standalone agent DID. The link (DTG VPC) is signed by the canonical agent (issuer),
+      // binding persona → canonical; it is the private, with-cause recovery path and is never presented.
+      const persona = await mintAgentSigner();
+      const build = (did: string) => ({ id: did, type: ['VerifiableCredential', 'VerifiablePersonaCredential'], issuer: canonical.did, credentialSubject: { id: persona.did } });
+      const did = await createAsset(canonical, { pending: true });
+      const link = signed(build(did), canonical.privateJwk, vm(canonical.did)) as PersonaLink;
+      const current = await gatekeeper.resolveDID(did);
+      const doc: Record<string, unknown> = { ...current, didDocumentData: link };
+      delete doc.didDocumentMetadata;
+      delete doc.didResolutionMetadata;
+      const updateOp = { type: 'update', did, previd: current.didDocumentMetadata?.versionId, blockid: await blockid(), doc };
+      await gatekeeper.updateDID(signed(updateOp, canonical.privateJwk, vm(canonical.did)));
+      return { persona, link };
     },
 
     async revoke(did, controller) {
