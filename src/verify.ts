@@ -295,6 +295,26 @@ function receiptBody(r: Receipt): unknown {
 }
 
 /**
+ * Verify a **durably anchored** invocation record (the bi-directional commitment mechanism, INV-4 anchored). The
+ * record is an asset controlled by the party that anchored it (op-log-as-proof); its data holds the agent-signed
+ * invocation and the counterparty-signed receipt. A third party resolves it and verifies both commitments from
+ * signatures + resolution alone — offline, and without the AAC being touched (the grantor stays out of the loop).
+ *
+ * @implements INV-4, R11
+ */
+export async function verifyAnchoredRecord(recordDid: string, deps: VerifyDeps): Promise<RecordResult> {
+  const res = await deps.resolver.resolve(recordDid);
+  if (!res || res.deactivated || res.kind !== 'asset' || !res.data) return { ok: false, reason: 'record-unresolvable' };
+  const data = res.data as { invocation?: Invocation; receipt?: Receipt };
+  if (!data.invocation) return { ok: false, reason: 'record-malformed' };
+  const inner = await verifyRecord({ invocation: data.invocation, receipt: data.receipt }, deps);
+  if (!inner.ok) return inner;
+  // Bind the anchor to the committing party: a record carrying a receipt must be anchored by that receipt's server.
+  if (data.receipt && res.controller !== data.receipt.server) return { ok: false, reason: 'anchor-mismatch' };
+  return { ...inner, anchoredBy: res.controller };
+}
+
+/**
  * Unmask a **persona** — the with-cause attribution path (PW-3, PW-4). Given a persona-link (DTG VPC), return the
  * canonical agent it binds to **iff** the link is signed by that canonical agent (so it cannot be forged or
  * repudiated), is well-formed, and is not revoked. Fails closed otherwise — never returns a canonical it can't

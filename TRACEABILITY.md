@@ -4,7 +4,7 @@
 
 Chain: **foundational R\* ← feature XX-\* ← design D-\* ← code (@implements) ← test (@verifies)**.
 Foundational `R*` inherit coverage from the feature requirements that realize them ("via").
-48 requirements · 40 design points · 8 tagged code files · 13 tagged test files.
+48 requirements · 41 design points · 8 tagged code files · 14 tagged test files.
 
 | Requirement | Realized by | Design | Code | Tests | Status |
 |---|---|---|---|---|---|
@@ -18,7 +18,7 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | R8 | DC-1, DC-2, DC-5 | D-AS-2, D-AS-3, D-DC-1, D-DC-5, D-DC-2 | src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | R9 | AC-13, AC-7, AC-8 | D-AAC-11, D-AAC-4, D-AS-1, D-AAC-10 | src/verify.ts, src/archon/resolver.ts, src/capability.ts | test/issuer.test.ts, test/verify.test.ts, test/archon.test.ts, test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | R10 | AC-13, AC-7, TR-5 | D-TR-5, D-AAC-11, D-AAC-4, D-AS-1 | src/archon/resolver.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
-| R11 | AC-12, INV-1, INV-4, PW-3 | D-INV-4, D-PW-3, D-AAC-9, D-INV-1 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts | test/verify.test.ts, test/invocation.test.ts, test/protocol.test.ts, test/pairwise.test.ts | D:✓ C:✓ T:✓ |
+| R11 | AC-12, INV-1, INV-4, PW-3 | D-ENG-1, D-INV-4, D-PW-3, D-AAC-9, D-INV-1 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts | test/verify.test.ts, test/invocation.test.ts, test/engagement.test.ts, test/protocol.test.ts, test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | R12 | AC-12, PW-1, PW-2, PW-3, PW-4 | D-PW-1, D-PW-2, D-AAC-9, D-PW-3, D-PW-4 | src/verify.ts, src/archon/issuer.ts | test/verify.test.ts, test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | R13 | AC-11, INV-5 | D-AAC-8, D-INV-5 | src/archon/issuer.ts, src/verify.ts | test/step-up.test.ts, test/invocation.test.ts | D:✓ C:✓ T:✓ |
 | R14 | — | D-PM-2, D-PM-5, D-SCH-1 | src/archon/transport.ts, src/protocol.ts, src/transport.ts | test/protocol.test.ts, test/schema.test.ts | D:✓ C:✓ T:✓ |
@@ -45,7 +45,7 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | INV-1 | — | D-INV-1 | src/archon/issuer.ts, src/protocol.ts, src/verify.ts | test/invocation.test.ts | D:✓ C:✓ T:✓ |
 | INV-2 | — | D-INV-2 | src/protocol.ts, src/verify.ts | test/invocation.test.ts, test/protocol.test.ts | D:✓ C:✓ T:✓ |
 | INV-3 | — | D-INV-3 | src/verify.ts | test/invocation.test.ts | D:✓ C:✓ T:✓ |
-| INV-4 | — | D-INV-4 | src/archon/issuer.ts, src/verify.ts | test/invocation.test.ts, test/protocol.test.ts | D:✓ C:✓ T:✓ |
+| INV-4 | — | D-ENG-1, D-INV-4 | src/archon/issuer.ts, src/verify.ts | test/engagement.test.ts, test/invocation.test.ts, test/protocol.test.ts | D:✓ C:✓ T:✓ |
 | INV-5 | — | D-INV-5 | src/verify.ts | test/invocation.test.ts | D:✓ C:✓ T:✓ |
 | PW-1 | — | D-PW-1 | src/archon/issuer.ts | test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | PW-2 | — | D-PW-2 | src/archon/issuer.ts | test/pairwise.test.ts | D:✓ C:✓ T:✓ |
