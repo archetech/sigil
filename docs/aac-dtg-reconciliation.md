@@ -37,6 +37,9 @@ contribution, riding on a DTG edge.
 | Vouching / reputation → trust level | **VEC** (Verifiable Endorsement Credential) | grounds the assurance ladder |
 | Org membership / onboarding (if modelled) | **VMC / VIC** | optional |
 
+These trust-graph credentials reference **DTG's** schemas. The **AAC** — the capability layer DTG does not model —
+has **Sigil's own** schema. See [`schemas.md`](schemas.md).
+
 ## The re-specified AAC
 
 ```json

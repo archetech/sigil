@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sigil.archetech.com/schemas/aac/v0",
+  "title": "Agent Authorization Credential",
+  "description": "Sigil's own credential — the object-capability layer DTG does not model. Register it as an Archon schema DID (createSchema); minted AACs reference it via credentialSchema. Trust-graph credentials (VRC/VPC/VEC/VWC/VMC) reference DTG's schemas instead.",
+  "$credentialContext": [
+    "https://www.w3.org/ns/credentials/v2",
+    "https://sigil.archetech.com/credentials/aac/v0"
+  ],
+  "$credentialType": ["VerifiableCredential", "AgentAuthorizationCredential"],
+  "type": "object",
+  "required": ["id", "type", "issuer", "validFrom", "validUntil", "credentialSubject"],
+  "properties": {
+    "id": { "type": "string", "description": "The credential's own DID (the asset it is anchored as)." },
+    "type": { "type": "array", "items": { "type": "string" }, "contains": { "const": "AgentAuthorizationCredential" } },
+    "issuer": { "type": "string", "description": "The issuing controller DID (a party to the referenced relationship)." },
+    "validFrom": { "type": "string", "format": "date-time" },
+    "validUntil": { "type": "string", "format": "date-time" },
+    "credentialSubject": {
+      "type": "object",
+      "required": ["id", "authorization"],
+      "properties": {
+        "id": { "type": "string", "description": "The agent DID (the holder proves control of its key)." },
+        "relationship": { "type": "string", "description": "The DTG VRC establishing controller ↔ agent (root only)." },
+        "authorization": { "$ref": "#/$defs/capability" },
+        "assuranceLevel": { "type": "string" }
+      }
+    },
+    "credentialSchema": {
+      "type": "object",
+      "properties": { "id": { "type": "string" }, "type": { "type": "string" } }
+    },
+    "proof": {
+      "type": "object",
+      "description": "Optional inner signature. An op-log-as-proof AAC omits it — authenticity is that its asset is controlled by the issuer (docs/keymaster-account.md)."
+    }
+  },
+  "$defs": {
+    "capability": {
+      "type": "object",
+      "description": "Structured authority — never free-text scope (R5/AC-4).",
+      "required": ["actions", "resources"],
+      "properties": {
+        "actions": { "type": "array", "items": { "type": "string" } },
+        "resources": { "type": "array", "items": { "type": "string" } },
+        "constraints": {
+          "type": "object",
+          "properties": {
+            "audience": { "type": "array", "items": { "type": "string" } },
+            "notAfter": { "type": "string", "format": "date-time" },
+            "maxInvocations": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "delegable": { "type": "boolean", "description": "Advisory only — not a delegation gate (Karp; docs/delegation-chain.md §5)." },
+        "parent": { "type": ["string", "null"], "description": "The parent capability this one narrows (delegations); null at the root." }
+      }
+    }
+  }
+}

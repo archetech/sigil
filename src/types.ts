@@ -67,6 +67,9 @@ export interface AAC {
     readonly authorization: Capability;
     readonly assuranceLevel?: string;
   };
+  /** Reference to the Sigil AAC schema (an Archon schema DID) — makes the credential self-describing + validatable.
+   *  The capability layer is Sigil's own schema (`schemas/aac.schema.json`); trust-graph credentials reference DTG's. */
+  readonly credentialSchema?: { readonly id: string; readonly type: string };
   /** The issuer's inner signature. **Optional**: an op-log-as-proof credential omits it — its authenticity is that
    *  its asset is controlled by the issuer (proven by the signed operation log), so a Keymaster can mint it with
    *  `createAsset` and never expose a key. See `docs/keymaster-account.md`. */
