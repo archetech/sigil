@@ -16,7 +16,7 @@
  *
  * @implements R1, R3, R6, AC-3, AC-11, TR-3, INV-1, INV-4, PW-1, PW-2, PW-3
  */
-import type { AAC, VRC, Capability, CoSign, TrustCredential, PersonaLink, Presentation, Invocation, Receipt, Proof, Jwk } from '../types.ts';
+import type { AAC, VRC, Capability, CoSign, TrustCredential, PersonaLink, Presentation, Invocation, Receipt, InvocationRecord, Proof, Jwk } from '../types.ts';
 import { attenuates, isStructuredCapability } from '../capability.ts';
 import { hexToBase64url } from '../base64url.ts';
 
@@ -98,6 +98,10 @@ export interface ArchonIssuer {
   invoke(holder: Signer, opts: { challenge: string; audience: string; action: string; resource: string; credentials: readonly AAC[]; trust?: readonly TrustCredential[]; coSign?: CoSign }): Invocation;
   /** A resource server signs a receipt acknowledging an invocation — the second half of an attributable record. */
   mintReceipt(server: Signer, invocation: Invocation, decision: 'accepted' | 'denied', opts?: { assuranceLevel?: string; at?: string }): Receipt;
+  /** Durably **anchor** a completed record `{invocation, receipt}` as an op-log-as-proof asset controlled by
+   *  `anchor` (the performing/receipting party) — a bilateral, non-repudiable commitment. It never touches the AAC,
+   *  so the grantor stays out of the loop (R8). Verified with `verifyAnchoredRecord`. */
+  anchorRecord(anchor: Signer, record: InvocationRecord): Promise<{ did: string }>;
   /** The accountable principal freshly co-signs a specific high-consequence request — a proof-of-human step-up. */
   coSign(authorizer: Signer, req: { challenge: string; audience: string; action: string; resource: string }): CoSign;
   /** An anchor (endorser / witness / registry) vouches for a controller — a DTG trust-graph credential (TR-3).
@@ -226,6 +230,14 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
       // non-repudiably attributable to the leaf agent, not a permission query.
       const { proof } = signed({ holder: holder.did, challenge, audience, action, resource }, holder.privateJwk, vm(holder.did));
       return { holder: holder.did, challenge, audience, action, resource, credentials, proof, ...(trust ? { trust } : {}), ...(coSign ? { coSign } : {}) };
+    },
+
+    async anchorRecord(anchor, record) {
+      // The record is anchored as an asset the anchoring party controls (op-log-as-proof). Its data holds the
+      // agent-signed invocation and the counterparty-signed receipt — both commitments, durable and resolvable.
+      const data = { type: ['VerifiableCredential', 'SigilInvocationRecord'], invocation: record.invocation, ...(record.receipt ? { receipt: record.receipt } : {}) };
+      const did = await createAsset(anchor, data);
+      return { did };
     },
 
     mintReceipt(server, invocation, decision, opts = {}) {

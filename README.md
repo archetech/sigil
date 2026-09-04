@@ -60,6 +60,9 @@ standing permission. Three layers:
   signed **receipt**; the invocation + receipt is an **attributable record** a third party can re-verify offline to
   attribute the action to the acting agent and the accountable principal. Completes the ocap lifecycle
   **mint → delegate → invoke → revoke**. See [`docs/invocation.md`](docs/invocation.md).
+- **Engagement records** — the invocation + receipt (each side's signed commitment) can be **anchored** as a
+  durable, op-log-as-proof asset controlled by the performing party — a **bi-directional commitment** any auditor
+  verifies offline, without touching the grantor's credential. See [`docs/engagement.md`](docs/engagement.md).
 - **A2A exchange** — present-and-verify as a transport-agnostic protocol (request → challenge → presentation →
   result) that rides **Archon DIDComm** mailboxes, so two agents that have never met collaborate by DID. See the
   DIDComm profile in [`docs/presentation-model.md`](docs/presentation-model.md).
@@ -155,8 +158,8 @@ src/
     issuer.ts         createArchonIssuer          — mint / delegate / invoke / receipt / persona / revoke; self-custodied, optional HD-seed recovery
     transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
 test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol
-scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,didcomm}.ts (opt-in, live node)
-docs/                 substrate, archon-primitives, keymaster-account, schemas, presentation, agent-credential, delegation, invocation, trust-registry, …
+scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,engagement,didcomm}.ts (opt-in, live node)
+docs/                 substrate, archon-primitives, keymaster-account, schemas, presentation, agent-credential, delegation, invocation, engagement, trust-registry, …
 schemas/              aac.schema.json — Sigil's own AAC schema (trust-graph creds reference DTG's)
 demo/                 interactive web app (Vite) — build a chain and verify it, offline or live
 Requirements/         actor-first requirements (start with sigil-v0-requirements.md)

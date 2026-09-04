@@ -205,7 +205,8 @@ export interface Receipt {
   readonly proof: Proof;
 }
 
-/** A completed invocation as an auditable artifact: the agent-signed act plus the optional server-signed receipt. */
+/** A completed invocation as an auditable artifact: the agent-signed act plus the optional server-signed receipt.
+ *  The invocation is the *agent's* signed commitment; the receipt the *counterparty's* — a bilateral pair. */
 export interface InvocationRecord {
   readonly invocation: Invocation;
   readonly receipt?: Receipt;
@@ -220,6 +221,8 @@ export interface RecordResult {
   readonly actor?: string;
   /** The accountable principal the authority descends from (the chain root's controller). */
   readonly accountablePrincipal?: string;
+  /** For an anchored record: the party that durably committed it (controls the record asset). */
+  readonly anchoredBy?: string;
 }
 
 /** What the verifier asks, plus the specific action being authorized. */
