@@ -156,7 +156,8 @@ src/
     transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
 test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol
 scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,didcomm}.ts (opt-in, live node)
-docs/                 substrate, archon-primitives, keymaster-account (op-log-as-proof), presentation, agent-credential, delegation, invocation, trust-registry, …
+docs/                 substrate, archon-primitives, keymaster-account, schemas, presentation, agent-credential, delegation, invocation, trust-registry, …
+schemas/              aac.schema.json — Sigil's own AAC schema (trust-graph creds reference DTG's)
 demo/                 interactive web app (Vite) — build a chain and verify it, offline or live
 Requirements/         actor-first requirements (start with sigil-v0-requirements.md)
 tools/trace/          the traceability-matrix generator

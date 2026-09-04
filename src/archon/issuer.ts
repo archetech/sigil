@@ -63,6 +63,9 @@ export interface IssuerOptions {
   /** A BIP-39 mnemonic to seed HD key derivation — every minted identity's key is then derived from it and is
    *  **recoverable** (same seed + index ⇒ same key), like the Keymaster's HD wallet. Omit for random keys. */
   readonly mnemonic?: string;
+  /** The Sigil AAC schema DID (an Archon schema DID). When set, minted AACs carry a `credentialSchema` reference,
+   *  making them self-describing + validatable against `schemas/aac.schema.json`. */
+  readonly aacSchemaDid?: string;
 }
 
 export interface ArchonIssuer {
@@ -150,9 +153,10 @@ export function createArchonIssuer(gatekeeper: IssuerGatekeeper, cipher: IssuerC
     await gatekeeper.updateDID(signed(updateOp, signer.privateJwk, vm(signer.did)));
     return { did, credential };
   }
+  const aacSchema = options.aacSchemaDid ? { credentialSchema: { id: options.aacSchemaDid, type: 'JsonSchema' } } : {};
   const aacBase = (did: string, issuer: string, opts: { validFrom?: string; validUntil?: string }) => ({
     id: did, type: ['VerifiableCredential', 'AgentAuthorizationCredential'], issuer,
-    validFrom: opts.validFrom ?? now(), validUntil: opts.validUntil ?? '2099-01-01T00:00:00Z',
+    validFrom: opts.validFrom ?? now(), validUntil: opts.validUntil ?? '2099-01-01T00:00:00Z', ...aacSchema,
   });
   const withAssurance = (level?: string) => (level ? { assuranceLevel: level } : {});
 

@@ -4,7 +4,7 @@
 
 Chain: **foundational R\* ← feature XX-\* ← design D-\* ← code (@implements) ← test (@verifies)**.
 Foundational `R*` inherit coverage from the feature requirements that realize them ("via").
-48 requirements · 39 design points · 8 tagged code files · 12 tagged test files.
+48 requirements · 40 design points · 8 tagged code files · 13 tagged test files.
 
 | Requirement | Realized by | Design | Code | Tests | Status |
 |---|---|---|---|---|---|
@@ -21,7 +21,7 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | R11 | AC-12, INV-1, INV-4, PW-3 | D-INV-4, D-PW-3, D-AAC-9, D-INV-1 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts | test/verify.test.ts, test/invocation.test.ts, test/protocol.test.ts, test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | R12 | AC-12, PW-1, PW-2, PW-3, PW-4 | D-PW-1, D-PW-2, D-AAC-9, D-PW-3, D-PW-4 | src/verify.ts, src/archon/issuer.ts | test/verify.test.ts, test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | R13 | AC-11, INV-5 | D-AAC-8, D-INV-5 | src/archon/issuer.ts, src/verify.ts | test/step-up.test.ts, test/invocation.test.ts | D:✓ C:✓ T:✓ |
-| R14 | — | D-PM-2, D-PM-5 | src/archon/transport.ts, src/protocol.ts, src/transport.ts | test/protocol.test.ts | D:✓ C:✓ T:✓ |
+| R14 | — | D-PM-2, D-PM-5, D-SCH-1 | src/archon/transport.ts, src/protocol.ts, src/transport.ts | test/protocol.test.ts, test/schema.test.ts | D:✓ C:✓ T:✓ |
 | R15 | AC-6 | D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R16 | AC-10, TR-1, TR-2, TR-3, TR-4, TR-5 | D-PM-4, D-TR-3, D-AAC-6, D-TR-1, D-TR-2, D-TR-4, D-TR-5 | src/verify.ts, src/archon/issuer.ts | test/step-up.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
 | AC-1 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
