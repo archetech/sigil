@@ -4,14 +4,14 @@
 
 Chain: **foundational R\* ← feature XX-\* ← design D-\* ← code (@implements) ← test (@verifies)**.
 Foundational `R*` inherit coverage from the feature requirements that realize them ("via").
-48 requirements · 38 design points · 8 tagged code files · 11 tagged test files.
+48 requirements · 39 design points · 8 tagged code files · 12 tagged test files.
 
 | Requirement | Realized by | Design | Code | Tests | Status |
 |---|---|---|---|---|---|
 | R1 | AC-1, AC-9 | D-PM-3, D-AAC-1, D-AAC-5 | src/archon/issuer.ts, src/verify.ts | test/hd-custody.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R2 | AC-1, AC-2 | D-PM-1, D-AAC-1 | src/archon/resolver.ts, src/archon/signatures.ts, src/verify.ts | test/archon.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R3 | AC-3, AC-9, DC-3 | D-PM-3, D-AAC-11, D-AAC-2, D-AAC-5, D-DC-3 | src/archon/issuer.ts, src/archon/signatures.ts, src/verify.ts | test/issuer.test.ts, test/archon.test.ts, test/verify.test.ts, test/delegation.test.ts | D:✓ C:✓ T:✓ |
-| R4 | AC-3 | D-AAC-11, D-AAC-2 | src/archon/issuer.ts, src/archon/signatures.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
+| R4 | AC-3 | D-KM-1, D-AAC-11, D-AAC-2 | src/verify.ts, src/archon/issuer.ts, src/archon/signatures.ts | test/oplog-proof.test.ts, test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R5 | AC-4 | D-AAC-3 | src/capability.ts | test/authorization.test.ts | D:✓ C:✓ T:✓ |
 | R6 | AC-8, DC-4 | D-DC-4, D-AAC-10 | src/archon/issuer.ts, src/capability.ts, src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | R7 | AC-5, AC-6, INV-1, INV-2, INV-3 | D-INV-1, D-PM-1, D-AAC-7, D-AAC-3, D-INV-2, D-INV-3 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts | test/verify.test.ts, test/invocation.test.ts, test/protocol.test.ts | D:✓ C:✓ T:✓ |

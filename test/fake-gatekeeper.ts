@@ -8,14 +8,14 @@ import type { Jwk } from '../src/index.ts';
 export interface HashJSON { hashJSON(obj: unknown): string; }
 
 export function makeFakeGatekeeper(cipher: HashJSON) {
-  type Entry = { type: 'agent' | 'asset'; publicJwk?: Jwk; data?: unknown; deactivated: boolean; versionId: string };
+  type Entry = { type: 'agent' | 'asset'; controller?: string; publicJwk?: Jwk; data?: unknown; deactivated: boolean; versionId: string };
   const store = new Map<string, Entry>();
   let seq = 0;
   return {
     async getBlock() { return null; },
     async createDID(op: any): Promise<string> {
       const did = `did:cid:test${cipher.hashJSON(op).slice(0, 44)}`;
-      store.set(did, { type: op.registration.type, publicJwk: op.publicJwk, data: op.data, deactivated: false, versionId: `v${++seq}` });
+      store.set(did, { type: op.registration.type, controller: op.controller, publicJwk: op.publicJwk, data: op.data, deactivated: false, versionId: `v${++seq}` });
       return did;
     },
     async updateDID(op: any): Promise<boolean> {
@@ -31,7 +31,7 @@ export function makeFakeGatekeeper(cipher: HashJSON) {
       if (!e) return { didResolutionMetadata: { error: 'invalidDid' }, didDocument: {}, didDocumentMetadata: {} };
       const didDocumentMetadata = { deactivated: e.deactivated, versionId: e.versionId };
       if (e.type === 'agent') return { didDocument: { verificationMethod: [{ id: '#key-1', publicKeyJwk: e.publicJwk }] }, didDocumentMetadata };
-      return { didDocumentData: e.deactivated ? undefined : e.data, didDocumentMetadata };
+      return { didDocument: { controller: e.controller }, didDocumentData: e.deactivated ? undefined : e.data, didDocumentMetadata };
     },
   };
 }

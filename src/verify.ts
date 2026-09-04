@@ -8,7 +8,7 @@
  * the signature primitive is behind `SignatureVerifier`. The logic here is what Sigil owns; the crypto and the
  * substrate are injected.
  */
-import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, PersonaLink, PersonaResult, Presentation, Invocation, Receipt, InvocationRecord, VerifyRequest, VerifyDeps, VerifyResult, RecordResult } from './types.ts';
+import type { AAC, VRC, Jwk, Proof, CoSign, TrustCredential, PersonaLink, PersonaResult, ResolvedDid, Presentation, Invocation, Receipt, InvocationRecord, VerifyRequest, VerifyDeps, VerifyResult, RecordResult } from './types.ts';
 import { attenuates, isStructuredCapability } from './capability.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
@@ -73,14 +73,41 @@ async function verifyRoot(root: AAC, deps: VerifyDeps): Promise<VerifyResult> {
   // The root's issuer must be a party to the relationship — the controller.
   if (root.issuer !== vrc.issuer) return deny('issuer-not-party');
 
-  // The relationship edge is signed by the controller, verified at its own signing time.
-  const relKey = await signerKeyAt(deps, vrc.proof, vrc.issuer);
-  if (!relKey || !(await deps.signatures.verify(credentialBody(vrc), vrc.proof, relKey))) return deny('relationship-signature');
-  // The root grant itself is signed by the same controller.
-  const grantKey = await signerKeyAt(deps, root.proof, root.issuer);
-  if (!grantKey || !(await deps.signatures.verify(credentialBody(root), root.proof, grantKey))) return deny('issuer-signature');
+  // The relationship edge is authenticated by the controller — an inner signature, or op-log-as-proof.
+  if (!(await issuerAuthentic(vrc, deps, vrcRes))) return deny('relationship-signature');
+  // The root grant itself is authenticated by the same controller.
+  if (!(await issuerAuthentic(root, deps))) return deny('issuer-signature');
 
   return { ok: true };
+}
+
+/** Two JSON values are structurally equal (object key order ignored). Pure — no cipher needed in the verifier. */
+function jsonEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) return a.length === (b as unknown[]).length && a.every((x, i) => jsonEqual(x, (b as unknown[])[i]));
+  const ak = Object.keys(a as object), bk = Object.keys(b as object);
+  return ak.length === bk.length && ak.every((k) => jsonEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+}
+
+/**
+ * Establish that a durable credential was authored by `cred.issuer`, two equivalent ways:
+ *   (a) **inner proof** — a signature by the issuer over the credential body, verified point-in-time (self-custody);
+ *   (b) **op-log-as-proof** — the credential carries no proof, and its **asset is controlled by the issuer** (proven
+ *       by the signed operation log) **and the presented body IS the authentic anchored data**. This lets a Keymaster
+ *       mint credentials with `createAsset` (key never leaving the wallet); the anchored-data equality closes the
+ *       tamper hole (a mutated presented copy won't match what the controller signed into the log).
+ * @implements R4
+ */
+async function issuerAuthentic(cred: { id: string; issuer: string; proof?: Proof }, deps: VerifyDeps, resolved?: ResolvedDid): Promise<boolean> {
+  if (cred.proof) {
+    const key = await signerKeyAt(deps, cred.proof, cred.issuer);
+    return !!key && (await deps.signatures.verify(credentialBody(cred as AAC), cred.proof, key));
+  }
+  const res = resolved ?? await deps.resolver.resolve(cred.id);
+  if (!res || res.deactivated || res.controller !== cred.issuer) return false;
+  return jsonEqual(credentialBody(cred as AAC), res.data);
 }
 
 /** The DTG rung a trust credential's `type` can confer. */
@@ -115,8 +142,7 @@ async function deriveAssurance(rootIssuer: string, p: Presentation, deps: Verify
     if (!policy.anchors.includes(tc.issuer)) continue;          // signed by an anchor the verifier trusts
     const status = await deps.resolver.resolve(tc.id);          // not revoked (fail safe: unresolvable ⇒ skip)
     if (!status || status.deactivated) continue;
-    const key = await signerKeyAt(deps, tc.proof, tc.issuer);   // anchor's key state at signing time
-    if (!key || !(await deps.signatures.verify(credentialBody(tc), tc.proof, key))) continue;
+    if (!(await issuerAuthentic(tc, deps, status))) continue;   // authored by the anchor (inner proof or op-log)
     raise(rung);
   }
   return LADDER[best]!;
@@ -180,9 +206,9 @@ export async function verifyPresentation(p: Presentation, req: VerifyRequest, de
     if (i > 0) {
       const parent = chain[i - 1];
       if (!parent) return deny('presentation-shape');
-      // Signature — the delegator (this hop's issuer) signed it, verified at its signing version. [DC-5]
-      const key = await signerKeyAt(deps, hop.proof, hop.issuer);
-      if (!key || !(await deps.signatures.verify(credentialBody(hop), hop.proof, key))) return deny('hop-signature');
+      // Authenticity — the delegator (this hop's issuer) authored it (inner signature @ signing version, or
+      // op-log-as-proof). [DC-5, R4]
+      if (!(await issuerAuthentic(hop, deps, status))) return deny('hop-signature');
       // Linkage — the delegator IS the parent's subject, and the hop references the parent. [DC-4, DC-2]
       if (hop.issuer !== parent.credentialSubject.id) return deny('chain-linkage');
       if ((hop.credentialSubject.authorization.parent ?? null) !== parent.id) return deny('chain-linkage');
@@ -282,12 +308,7 @@ export async function verifyPersonaLink(link: PersonaLink, deps: VerifyDeps): Pr
   if (typeof persona !== 'string' || typeof canonical !== 'string') return { ok: false, reason: 'malformed' };
   const status = await deps.resolver.resolve(link.id);          // the VPC must resolve and not be revoked
   if (!status || status.deactivated) return { ok: false, reason: 'revoked' };
-  const key = await signerKeyAt(deps, link.proof, canonical);   // signed by the canonical agent, point-in-time
-  if (!key || !(await deps.signatures.verify(personaBody(link), link.proof, key))) return { ok: false, reason: 'signature' };
+  // Authored by the canonical agent — an inner signature, or op-log-as-proof (asset controlled by canonical).
+  if (!(await issuerAuthentic(link, deps, status))) return { ok: false, reason: 'signature' };
   return { ok: true, persona, canonical };
-}
-/** The object the canonical agent signs for a persona-link — the link without its proof. */
-function personaBody(l: PersonaLink): unknown {
-  const { proof: _proof, ...rest } = l;
-  return rest;
 }
