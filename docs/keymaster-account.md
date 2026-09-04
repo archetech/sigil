@@ -41,14 +41,23 @@ The resulting AAC has **no inner proof** and is controlled by `controller` — t
 it. **Verified live:** a real Keymaster-minted asset resolves through the library with `controller === issuer`, so
 Sigil accepts it, with the key never leaving the wallet.
 
-## What is wallet-backed, and what isn't
+## What is wallet-backed
 
-- **Issuer / controller side — wallet-backed.** The high-value root key (the accountable principal) lives in the
-  Keymaster; it mints VRCs/AACs via `createAsset`. This is where custody matters most.
-- **Presenter side — self-custody (for now).** A holder proof (present / invoke / co-sign) is an inner signature
-  over a challenge, which the wallet has no verb to produce for Sigil's shape. Presenters remain self-custody
-  identities (now HD-seed-recoverable, [`archon-primitives.md`](archon-primitives.md) §Open-questions-5). A wallet
-  could present only if it adopts the native `createResponse` VP envelope, or gains a raw-sign verb.
+**Both sides can be wallet-backed** — keys never leave the wallet.
+
+- **Issuer / controller side.** The Keymaster mints VRCs/AACs via `createAsset` (op-log-as-proof) as any of its
+  identities (`use-id` to switch). This is where custody matters most.
+- **Presenter side.** A holder proof (present / invoke / co-sign) is an `EcdsaSecp256k1Signature2019` over the JCS
+  hash — which is exactly what the Keymaster's **`addProof`** produces (exposed by the CLI as **`sign-file`**). So a
+  wallet-held agent signs a Sigil holder-binding `{holder, challenge, audience[, action, resource]}` with
+  `sign-file`, and the result is a valid Sigil proof. **Verified live:** GenitriX's wallet signed a holder binding
+  via `sign-file`, and the Sigil verifier accepted it against GenitriX's resolved key — with the key never leaving
+  the wallet. (This is the raw-sign the *`@didcid/clients` REST client* omits; a library-driven wallet signer shells
+  out to the CLI / MCP, or awaits the client exposing `addProof`.)
+
+So a real agent (its own `did:cid`, its own wallet) is a full Sigil participant — mint, delegate, present, invoke,
+co-sign, anchor, revoke — all via the Keymaster, no key ever exported. Self-custody identities remain the default
+for tests/portability (now HD-seed-recoverable, [`archon-primitives.md`](archon-primitives.md) §Open-questions-5).
 
 ## Public claims for unprivileged validation (direction)
 
