@@ -102,14 +102,26 @@ as the Keymaster derives its wallet IDs, so keys are **recoverable** (`recover(i
 recoverability gap for the many-identity persona case using the same `@didcid/cipher` HD primitives — no Keymaster
 required. Random keys remain the default for tests/portability.
 
-A **fully Keymaster-backed signer** (keys never leave the wallet) is the production ideal, but it is **blocked
-upstream**: the `KeymasterClient` exposes no generic *"sign this object as this DID"* verb — only `createId`,
-`createResponse`, `issueCredential`, and `encryptJSON`. It can mint HD-recoverable identities and revoke, but it
-cannot sign Sigil's arbitrary capability objects (AACs, invocations, co-signs, receipts) without extracting the key
-(defeating custody) or adopting the native encrypted-credential model (question 1). **The concrete ask:** a
-Keymaster `sign(object, asDID, proofPurpose)` primitive (ideally emitting `capabilityInvocation` for invocations)
-would make Sigil natively Keymaster-backed with no key ever leaving the wallet — the cleanest realization of the
-"peer that the Keymaster can grow to speak" relationship.
+A **fully Keymaster-backed signer** (keys never leave the wallet) is the production ideal, and it is **reachable
+today** — it is a design-alignment decision, not an upstream blocker. One HD wallet holds *many* identities (the
+controller **and** its agents **and** every persona, all seed-recoverable), and **`setCurrentId` / `useId`** switches
+which one acts, so the wallet can be every party in a Sigil flow. What it lacks is only a *raw* "sign this arbitrary
+object" verb; its **specific** signing verbs, with `useId`, cover Sigil's operations **if they impose their shapes**:
+
+| Sigil op | Keymaster verb (+ `useId`) | Note |
+|---|---|---|
+| mint agent / persona | `createId` | HD-derived, recoverable |
+| present / invoke (holder proof) | `createResponse` | Archon's native VP envelope — align our chain to it (question 2) |
+| AAC / VRC / persona-link | `issueCredential`, or `createAsset` | native VC (question 1), **or** the op-log route below |
+| revoke | `revokeDID` / `removeId` | direct |
+
+The clean route for credentials: our AAC carries a redundant inner `proof`; if instead the **asset's signed
+create-operation** (by the controller) *is* the issuer's signature — authenticity from the controller-of-asset + the
+signed operation log, not a second inner proof — then `useId(controller)` + `createAsset(aac)` mints a fully valid
+AAC with **no inner-sign and no new verb**. That is strictly more Archon-idiomatic (the op log *is* the signature)
+and is the cleanest path to Keymaster-native credentials. So the "peer that the Keymaster can grow to speak" is a
+matter of adopting native envelopes (questions 1–2), not adding a primitive — a raw `sign(object, asDID,
+proofPurpose)` verb would only be needed to keep Sigil's *current* custom shapes unchanged.
 
 ## What Sigil deliberately does not touch
 
