@@ -75,7 +75,7 @@ test('persona-link verification fails closed: forged, wrong-signer, or revoked d
   const { link } = await w.issuer.mintPersona(w.agent);
 
   // forged signature
-  const forged = { ...link, proof: { ...link.proof, proofValue: 'AAAA' } };
+  const forged = { ...link, proof: { ...link.proof!, proofValue: 'AAAA' } };
   assert.equal((await verifyPersonaLink(forged, w.deps)).reason, 'signature');
 
   // a link claiming a different canonical (issuer) than the one who actually signed → signature check fails

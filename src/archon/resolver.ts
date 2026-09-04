@@ -24,6 +24,7 @@ export interface GatekeeperLike {
 /** The slice of the gatekeeper's resolution result this adapter reads (a subset of `DidCidDocument`). */
 export interface GatekeeperDidDocument {
   didDocument?: {
+    controller?: string;
     verificationMethod?: Array<{ id?: string; publicKeyJwk?: unknown }>;
   };
   didDocumentMetadata?: { deactivated?: boolean };
@@ -67,7 +68,8 @@ export function createArchonResolver(gatekeeper: GatekeeperLike): Resolver {
         return { did, deactivated, kind: 'agent', keys } satisfies ResolvedDid;
       }
       if (doc.didDocumentData !== undefined && doc.didDocumentData !== null) {
-        return { did, deactivated, kind: 'asset', data: doc.didDocumentData } satisfies ResolvedDid;
+        const controller = doc.didDocument?.controller;
+        return { did, deactivated, kind: 'asset', data: doc.didDocumentData, ...(typeof controller === 'string' ? { controller } : {}) } satisfies ResolvedDid;
       }
       // No keys and no data. A `delete` yields exactly this with `deactivated: true` — a real resolution the
       // caller must see and deny. Anything else empty is an unresolvable response → fail-closed.

@@ -67,7 +67,10 @@ export interface AAC {
     readonly authorization: Capability;
     readonly assuranceLevel?: string;
   };
-  readonly proof: Proof;
+  /** The issuer's inner signature. **Optional**: an op-log-as-proof credential omits it — its authenticity is that
+   *  its asset is controlled by the issuer (proven by the signed operation log), so a Keymaster can mint it with
+   *  `createAsset` and never expose a key. See `docs/keymaster-account.md`. */
+  readonly proof?: Proof;
 }
 
 /** A DTG Verifiable Relationship Credential — the control edge (minimal shape for the anchor). */
@@ -78,7 +81,8 @@ export interface VRC {
   readonly issuer: string;
   /** The agent. */
   readonly credentialSubject: { readonly id: string };
-  readonly proof: Proof;
+  /** Optional inner signature — omitted for an op-log-as-proof credential (authenticity = asset controlled by issuer). */
+  readonly proof?: Proof;
 }
 
 /**
@@ -95,7 +99,8 @@ export interface TrustCredential {
   readonly issuer: string;
   /** The controller being vouched for. */
   readonly credentialSubject: { readonly id: string };
-  readonly proof: Proof;
+  /** Optional inner signature — omitted for an op-log-as-proof credential (authenticity = asset controlled by issuer). */
+  readonly proof?: Proof;
 }
 
 /**
@@ -111,7 +116,8 @@ export interface PersonaLink {
   readonly issuer: string;
   /** The persona DID. */
   readonly credentialSubject: { readonly id: string };
-  readonly proof: Proof;
+  /** Optional inner signature — omitted for an op-log-as-proof persona-link (authenticity = asset controlled by canonical). */
+  readonly proof?: Proof;
 }
 
 /** The result of unmasking a persona-link: the persona and (with a valid link) the canonical agent behind it. */
@@ -237,6 +243,9 @@ export interface ResolvedDid {
   readonly keys?: Readonly<Record<string, Jwk>>;
   /** The asset's document data — e.g. a VRC (assets). */
   readonly data?: unknown;
+  /** The asset's controlling agent DID (assets). Its authenticity is proven by the signed operation log, so
+   *  `controller === issuer` is a valid "the issuer authored this credential" check — op-log-as-proof. */
+  readonly controller?: string;
 }
 
 /** Resolve a DID by replaying its operations, optionally pinned to a point in time. */
