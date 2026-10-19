@@ -176,11 +176,13 @@ TRACEABILITY.md       generated Requirement → Design → Code → Test matrix
   generated [`TRACEABILITY.md`](TRACEABILITY.md) matrix.
 - [`docs/ci-and-testing.md`](docs/ci-and-testing.md) — the staged CI gate and the unit-vs-live-node split.
 - [`SECURITY.md`](SECURITY.md) — responsible disclosure.
+- [`GOVERNANCE.md`](GOVERNANCE.md) — the Archonomicon rules that apply to this repository, and who decides.
 
 ## Governance & license
 
 Sigil is a project under the [Archonomicon](https://github.com/archetech/archonomicon), the Archetech Nomicon —
 its decisions are made and recorded through that process, alongside Archon. Changes to project *rules* go through a
-Nomicon proposal; code and design changes follow [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Nomicon proposal; code and design changes follow [`CONTRIBUTING.md`](CONTRIBUTING.md). See [`GOVERNANCE.md`](GOVERNANCE.md)
+for the rules that apply here.
 
 Licensed under the [MIT License](LICENSE).

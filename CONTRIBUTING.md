@@ -45,6 +45,7 @@ A PR that changes design or code MUST:
 ## Governance vs. contribution
 
 This flow is for **code and design**. Changes to project *rules* or process go through a **Nomicon proposal** (a
-PR to the [Archonomicon](https://github.com/archetech/archonomicon)), unanimously agreed by the players.
+PR to the [Archonomicon](https://github.com/archetech/archonomicon)), adopted as its rules provide. See
+[`GOVERNANCE.md`](GOVERNANCE.md) for what the rules require here and who decides.
 
 Security issues follow [`SECURITY.md`](SECURITY.md) — never a public issue.
