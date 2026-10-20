@@ -97,6 +97,6 @@ full authorization contents.
 
 ---
 
-*Open requirements (tracking design §8): a scope vocabulary (`AC-4` refinement), the revocation mechanism (`AC-7`),
-and whether `assuranceLevel` is asserted or derived (`AC-10`) are not yet locked; they become firm requirements as
-the design note's open questions are resolved.*
+*Open requirements (tracking design §8): a scope vocabulary (`AC-4` refinement) is not yet locked. The revocation
+mechanism (`AC-7`: `delete` seen by replay, window per `R9`) and derived `assuranceLevel` (`AC-10`, `TR-1`) are now
+firm.*

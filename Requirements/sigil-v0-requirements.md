@@ -1,8 +1,11 @@
 # Sigil — Verifiable AI Agent Identity on Archon
 
-**v0 · discussion draft · not a specification**
+**v0.1 · foundational requirements · revised 2026-10-20**
 Audience: the Sigil collaboration.
-Purpose: agree the *shape* of the problem and the scope before building — a shared starting point, meant to be marked up.
+Purpose: the thesis, scope, actors, principles, and foundational requirements (`R1`–`R16`) that every feature
+requirement realizes. v0 was a discussion draft; v0.1 incorporates the review in
+[issue #1](https://github.com/archetech/sigil/issues/1) — the R8/R10 and R11/R12 tensions, the revocation window,
+the threat model (§4a), and the post-quantum framing — now that the first vertical slices have forced the decisions.
 
 ---
 
@@ -106,6 +109,35 @@ prior work and stated here on their own merit:
 
 ---
 
+## 4a. Threat model (v0)
+
+The adversary cases the principles exist to defeat, each mapped to the requirements that mitigate it and to what
+remains. Threat IDs (`T1`…) are **not** requirements and do not enter the traceability matrix; the mitigations
+cited are the traced requirements. The adversary is assumed to control the network and any relay or gateway, to
+hold any public artifact, and to be able to obtain credential bytes — but not the holder's signing key unless the
+case says so.
+
+| ID | Threat | Mitigated by | Residual / out of scope |
+|---|---|---|---|
+| T1 | A relay, gateway, or transport **lies about availability** — drops, delays, or reorders messages. | P5: a dropped message confers nothing; deny-by-default (P9) means absence is never authority. | Availability itself is out of scope — Sigil does not defend against denial of service. |
+| T2 | A relay or transport **tampers with content** or substitutes a credential. | P5, P6: every authority object is signed and verified point-in-time (`AC-1`, `DC-1`); the transport carries no trust (`R14`). | — |
+| T3 | **Replay** of a presentation or invocation — to the same verifier later, or to a different verifier. | Holder proof bound to the verifier's fresh nonce and audience (`AC-1`, `AC-6`, `INV-3`); stale or foreign challenge → deny. | A verifier that reissues a nonce defeats itself; nonce uniqueness is the verifier's duty. |
+| T4 | **Credential theft** — the bytes of an AAC are copied and presented by someone else. | Not bearer (`AC-2`): without proof of control of `credentialSubject.id`, the bytes are inert. | — |
+| T5 | **Compromised agent key.** | Per-hop, fail-closed revocation (`R9`, `R10`, `AC-7`): the principal `delete`s the agent or its grant; point-in-time signature checks keep earlier valid acts attributable (`R11`) rather than retroactively voided. Human step-up (`R13`, `AC-11`) bounds high-consequence use. | Acts between compromise and revocation are valid-looking — the window of `R9` is this exposure. Key custody is the wallet's (Archon Keymaster), not Sigil's. |
+| T6 | **Compromised delegator key** mid-chain. | As T5, plus: revoking that hop kills everything downstream (`AC-8`, `DC-4`), and monotonic attenuation (P3) bounds the blast radius — a compromised delegator can only mint within the scope it already held. | — |
+| T7 | **Confused deputy** at the MCP / A2A boundary — an agent is induced to spend its authority on an adversary's request. | Widening is unrepresentable (P3, `AC-8`); scope and audience are checked for the *specific* action at the point of use (`R7`, `AC-5`, `AC-6`); an invocation commits to one action, resource, and audience (`INV-1`, `INV-3`). | Whether the agent *should* make a request that is in scope is the agent's own policy — out of scope (§2). |
+| T8 | **Forged controller binding** — an agent claims a principal it does not have. | The binding is a VRC signed by the controller, and the AAC issuer must be a party to it (`AC-3`); the AAC and VRC are a fail-closed pair (`AC-13`). | — |
+| T9 | **Correlation** by a verifier, or by colluding verifiers, across an agent's relationships. | Personas (`PW-1`, `PW-2`); the persona-link is never presented in-band (`PW-3`). | Full unlinkability against colluding verifiers who also share timing and content side-channels is not claimed. |
+| T10 | **Stale or rolled-back resolution** — the verifier is served old registry state, so a revoked credential looks live. | Status is resolved current at each verification and an unresolvable DID denies (`AC-7`); any caching is bounded by the stated window (`R9`). | Registry consensus and propagation are the Archon substrate's concern; Sigil inherits its guarantees. |
+| T11 | **Malicious or careless trust anchor** asserts an assurance it did not earn. | Assurance is *derived* from what the verifier can prove, not asserted (`TR-1`); evidence from a non-anchor or revoked source fails safe to *lower* assurance (`TR-4`); trust never gates chain validity (`TR-5`). | Which anchors a verifier pins is the verifier's policy. |
+| T12 | **Forged persona-link** implicating an agent in a persona it never used. | Only a link signed by the canonical agent unmasks; forged, mis-subject, or revoked links do not (`PW-4`). | — |
+| T13 | **A principal's own agent exceeds the principal's intent** while staying inside its granted scope. | Human step-up for high-consequence actions (`R13`); least-authority grants (`R5`, `R6`). | Policy authorship — what to grant — is out of scope (§2). |
+
+Explicitly out of scope: denial of service and availability; compromise of the verifier's own host; wallet key
+custody and the registry's consensus (both Archon's); and the agent's own decision policy.
+
+---
+
 ## 5. Use-cases
 
 Each maps to a CG deliverable and to an existing Archon primitive, and names the property it must guarantee.
@@ -144,7 +176,7 @@ the relying party will accept it. *Guarantees: P9.*
 | Challenge/response proof-of-control | **Trust-level definitions** and the verification requirements per level |
 | Secure agent-to-agent messaging (DIDComm) | **Integration profiles**: A2A, MCP, OAuth/OIDC, SPIFFE |
 | Groups / trust registry | A **capability model**: mint → delegate-with-narrowing → invoke → revoke, as verifiable chains |
-| Keymaster wallet / signing | **Revocation & lifecycle** semantics (per-hop, fail-closed) and **post-quantum** requirements |
+| Keymaster wallet / signing | **Revocation & lifecycle** semantics (per-hop, fail-closed) and **signature-suite agility** (forward-compatibility, including post-quantum) |
 
 The point of the split: Sigil should be *thin* — most of the identity and messaging weight is already Archon's.
 Sigil is the credential shapes, the negotiation protocol, and the authority semantics that turn those primitives
@@ -176,20 +208,36 @@ use-case and a principle. This is a first set to react to, not a settled list.
   impossible to express or forge. *(UC-2; P3)*
 - **R7 · Verifier** — to confirm an agent's authorization scope *for this specific action* at the point of use,
   and refuse anything outside it. *(UC-3; P1, P10)*
-- **R8 · Agent** — to prove a multi-hop delegation chain to a verifier without any hop needing to contact any
-  other party live. *(UC-2; P5)*
+- **R8 · Agent** — to prove a multi-hop delegation chain to a verifier without any delegator or intermediate
+  issuer being contacted. "Offline" means *delegator-offline*: the verifier decides from the presented credentials
+  plus exactly two delegator-independent lookups against the public registry — **DID resolution** (keys, resolved
+  point-in-time at each signature) and **status resolution** (revocation, resolved current). Those lookups are the
+  freshness oracle `R10` needs; the carve-out is what reconciles the two. A verifier MAY serve them from cached
+  resolutions only within its stated window (`R9`). *(UC-2; P5)* — realized by `DC-1`.
 
 **Revocation & lifecycle**
 - **R9 · Principal / Delegator** — to revoke an agent or a single delegation hop and have every downstream
-  authority fail closed within a bounded, stated window. *(UC-4; P4)*
+  authority fail closed within a bounded, stated window. **The window is defined** as the registry's propagation
+  latency for the `delete` operation plus the verifier's resolution staleness. The reference verifier resolves
+  **fresh at every verification** (staleness zero), so its window is the substrate's propagation latency alone; a
+  verifier that caches resolutions MUST bound the cache age and MUST state that bound as its window. There is no
+  status list, short-lived-token, or CRLite-style artifact: revocation is the `delete` operation, seen by replay.
+  *(UC-4; P4)* — realized by `AC-7`, `AC-13`, `DC-4`.
 - **R10 · Verifier** — to detect a revoked identity or capability and refuse it, defaulting to *deny* on any
   ambiguity or unavailability. *(UC-4; P4)*
 
 **Accountability & privacy**
 - **R11 · Verifier / Auditor** — to attribute a completed action to the acting agent and its controlling entity
-  for liability, disclosing only what the attribution requires. *(UC-5; P2)*
+  for liability, disclosing only what the attribution requires. Attribution is **auditor-mediated, with cause**:
+  by default an act is attributed to the *persona* that performed it (`R12`); the canonical agent and its principal
+  are recovered only by an authorized holder of the signed **persona-link** (a DTG VPC, kept out-of-band), which
+  the canonical agent cannot repudiate and no third party can forge. Selective disclosure is not used for this.
+  *(UC-5; P2)* — realized by `INV-1`, `INV-4`, `PW-3`, `PW-4`.
 - **R12 · Principal** — that my agent's independent interactions with different counterparties cannot be
-  correlated into a profile without cause, via pairwise identifiers. *(UC-5; P8)*
+  correlated into a profile without cause, via pairwise identifiers (a fresh **persona** DID per relationship). This
+  is what `R11` trades against, and the persona-link is the agreed resolution: unlinkable to counterparties,
+  linkable to an authorized auditor. Full unlinkability against *colluding* verifiers is a stated residual (§4a).
+  *(UC-5; P8)* — realized by `PW-1`–`PW-4`.
 
 **Human oversight**
 - **R13 · Human authorizer** — that high-consequence actions cannot complete without my proof-of-human co-sign,
@@ -213,26 +261,42 @@ These are genuinely open — the point of a v0 is to surface them for discussion
    Archon-native shape? Where should Sigil *propose* to the CG rather than follow?
 2. **Trust-level taxonomy** — what are the levels, and what verification does each demand? (self-asserted →
    org-vouched → human-co-signed → …?)
+   *Status: settled for v0 — levels are **derived** from what the verifier proves, raised by a decentralized trust
+   graph (`TR-1`–`TR-5`, `AC-10`; [`trust-registry.md`](trust-registry.md)).*
 3. **The controller binding** — is "controlling entity" always a principal DID, or can it be an org credential, a
    role, a legal identifier? How is accountability expressed for a chain of orgs?
 4. **First-contact protocol** — synchronous negotiation vs. presentation-of-credentials-then-verify; how much
    round-trip is acceptable before an interaction?
+   *Status: settled for v0 — one round trip: request → challenge → presentation (or invocation) → result (or
+   receipt), transport-agnostic (`R14`; [`../docs/presentation-model.md`](../docs/presentation-model.md)).*
 5. **Integration priority** — which profile is first (A2A? MCP?), driven by observed market demand?
+   *Status: the review recommended MCP first. v0 shipped the transport-agnostic exchange over Archon DIDComm
+   (`R14`) because that is where the live counterparty agents were; the **MCP profile is the next integration**,
+   now also motivated by gateway environments that speak only MCP and A2A. Still open: the exact shape of that
+   profile.*
 6. **Human-in-the-loop boundary** — what makes an action "high-consequence," and is that Sigil's call, the
    principal's policy, or the verifier's requirement?
+   *Status: settled for v0 — the **verifier designates** high-consequence actions and requires the co-sign
+   (`AC-11`, `INV-5`); Sigil supplies the mechanism, not the policy.*
 7. **Vocabulary alignment** — do we adopt the CG's terms as they solidify, or seed ours (the actor model above)
    into the CG?
 8. **Post-quantum** — a requirement now, or a stated forward-compatibility constraint?
+   *Status: resolved — a **forward-compatibility constraint**, not a mandate. The proof names its signature suite
+   (`proof.type`), and verification sits behind a suite-agnostic `SignatureVerifier` seam, so a post-quantum suite
+   is an added verifier, not a redesign. Today's only suite is Archon's `EcdsaSecp256k1Signature2019`. §6 is
+   worded to match.*
 
 ---
 
-## 9. Proposed next steps
+## 9. Next steps
 
-1. The collaboration reacts to this v0 — cut, add, re-scope; especially §2 (scope), §5 (use-cases), §8.
-2. Lock the **anchor use-case** (likely UC-1 or the priority A2A exchange) and design it end-to-end against Archon
-   primitives as the first vertical slice.
-3. From the anchor slice, derive the **agent-credential profile** (R3/R4/R5) as the first concrete artifact to
-   take toward the CG.
-4. Stand up the Sigil repo and a minimal reference implementation of the anchor use-case.
+The v0 steps are done: the collaboration reviewed the draft (issue #1, folded into v0.1); the anchor use-case
+(present-and-verify, UC-1/UC-3) was designed and implemented against live Archon as the first vertical slice; the
+agent-credential profile exists ([`agent-credential.md`](agent-credential.md), `schemas/aac.schema.json`); the
+reference implementation is in this repository. What remains open at the foundational level:
+
+1. Take the agent-credential profile toward the W3C Agent Identity CG (§8 Q1, Q7).
+2. Define the **MCP integration profile** (§8 Q5).
+3. Decide how "controlling entity" generalizes beyond a principal DID (§8 Q3).
 
 *Sigil — a verifiable mark an agent presents to prove who it is, who stands behind it, and what it may do.*
