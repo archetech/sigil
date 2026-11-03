@@ -60,3 +60,9 @@ contributors.
   *same* step then runs anyway and reverts the working tree to the pre-merge state. Poll mergeability first if it
   is `UNKNOWN`, confirm the merge actually landed, *then* clean up as a separate step. (Work was recovered from
   `origin`; nothing was lost — but the scare was self-inflicted by chaining.)
+- **2026-10-20 — Close a review in the document it reviewed.** Morningstar's review of the foundational
+  requirements (issue #1) sat open for seven weeks although every point it raised had been decided — in the
+  *feature* requirements and the code (`DC-1`, `AC-7`, `PW-3`, the `SignatureVerifier` seam). An auditor reading
+  `sigil-v0-requirements.md` saw unresolved tensions that no longer existed. When a slice answers a question asked
+  of a higher-level doc, amend that doc in the same PR and cite the realizing IDs; don't leave the answer implicit
+  in a lower layer.
