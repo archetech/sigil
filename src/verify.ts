@@ -13,8 +13,10 @@ import { attenuates, isStructuredCapability } from './capability.ts';
 
 const deny = (reason: string): VerifyResult => ({ ok: false, reason });
 
-/** Assurance ladder, low → high (docs/agent-credential.md §5). */
-const LADDER = ['identity', 'controller-vouched', 'issuer-pinned', 'endorsed', 'witnessed', 'human-co-signed'];
+/** Assurance ladder, low → high (docs/agent-credential.md §5). Exported so integration profiles (e.g. the Poly
+ *  adapter) can map a level to its rung index without restating the ladder. */
+export const ASSURANCE_LADDER: readonly string[] = ['identity', 'controller-vouched', 'issuer-pinned', 'endorsed', 'witnessed', 'human-co-signed'];
+const LADDER = ASSURANCE_LADDER;
 function meetsAssurance(actual: string, required: string): boolean {
   const a = LADDER.indexOf(actual);
   const r = LADDER.indexOf(required);

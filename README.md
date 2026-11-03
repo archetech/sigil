@@ -69,6 +69,10 @@ standing permission. Three layers:
 - **Trust levels** — the verifier *derives* an assurance level from what it can prove, and raises it from a
   decentralized **trust graph** (DTG endorsement / witness / membership from anchors it trusts) rather than a
   central list. See [`docs/trust-registry.md`](docs/trust-registry.md).
+- **Integration profiles** — Sigil consumed through a host the relying party already runs. First profile:
+  **Poly**, the checked-state-machine runtime for agent-written software — Sigil is its host *verifier adapter*
+  (PD5), emitting typed claims with derived assurance, freshness, and the verified chain as narrowing mandates
+  (PD6). See [`docs/poly-profile.md`](docs/poly-profile.md).
 - **Correlation resistance** — an agent acts under a **persona** (a fresh DID per relationship), so counterparties
   can't correlate it; a signed persona-link (DTG VPC), kept out-of-band, is the *with-cause* recovery path. See
   [`docs/pairwise.md`](docs/pairwise.md).
@@ -157,7 +161,9 @@ src/
     signatures.ts     createArchonSignatureVerifier — @didcid/cipher (JCS + ECDSA secp256k1)
     issuer.ts         createArchonIssuer          — mint / delegate / invoke / receipt / persona / revoke; self-custodied, optional HD-seed recovery
     transport.ts      createArchonTransport       — the protocol over Archon DIDComm mailboxes
-test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol
+  profiles/
+    poly.ts           createPolyVerifier          — Poly host verifier adapter (PD5/PD6): claims · assurance · freshness · mandate
+test/                 node:test — verify · archon · issuer · delegation · step-up · trust-registry · invocation · protocol · poly-profile
 scripts/              e2e-archon-{resolve,prove,delegate,stepup,invoke,engagement,didcomm}.ts (opt-in, live node)
 docs/                 substrate, archon-primitives, keymaster-account, schemas, presentation, agent-credential, delegation, invocation, engagement, trust-registry, …
 schemas/              aac.schema.json — Sigil's own AAC schema (trust-graph creds reference DTG's)

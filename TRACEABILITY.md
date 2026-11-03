@@ -4,7 +4,7 @@
 
 Chain: **foundational R\* ← feature XX-\* ← design D-\* ← code (@implements) ← test (@verifies)**.
 Foundational `R*` inherit coverage from the feature requirements that realize them ("via").
-48 requirements · 41 design points · 8 tagged code files · 14 tagged test files.
+53 requirements · 51 design points · 9 tagged code files · 15 tagged test files.
 
 | Requirement | Realized by | Design | Code | Tests | Status |
 |---|---|---|---|---|---|
@@ -13,17 +13,17 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | R3 | AC-3, AC-9, DC-3 | D-PM-3, D-AAC-11, D-AAC-2, D-AAC-5, D-DC-3 | src/archon/issuer.ts, src/archon/signatures.ts, src/verify.ts | test/issuer.test.ts, test/archon.test.ts, test/verify.test.ts, test/delegation.test.ts | D:✓ C:✓ T:✓ |
 | R4 | AC-3 | D-KM-1, D-AAC-11, D-AAC-2 | src/verify.ts, src/archon/issuer.ts, src/archon/signatures.ts | test/oplog-proof.test.ts, test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
 | R5 | AC-4 | D-AAC-3 | src/capability.ts | test/authorization.test.ts | D:✓ C:✓ T:✓ |
-| R6 | AC-8, DC-4 | D-DC-4, D-AAC-10 | src/archon/issuer.ts, src/capability.ts, src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
-| R7 | AC-5, AC-6, INV-1, INV-2, INV-3 | D-INV-1, D-PM-1, D-AAC-7, D-AAC-3, D-INV-2, D-INV-3 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts | test/verify.test.ts, test/invocation.test.ts, test/protocol.test.ts | D:✓ C:✓ T:✓ |
-| R8 | DC-1, DC-2, DC-5 | D-AS-2, D-AS-3, D-DC-1, D-DC-5, D-DC-2 | src/verify.ts | test/delegation.test.ts | D:✓ C:✓ T:✓ |
-| R9 | AC-13, AC-7, AC-8 | D-AAC-11, D-AAC-4, D-AS-1, D-AAC-10 | src/verify.ts, src/archon/resolver.ts, src/capability.ts | test/issuer.test.ts, test/verify.test.ts, test/archon.test.ts, test/delegation.test.ts | D:✓ C:✓ T:✓ |
-| R10 | AC-13, AC-7, TR-5 | D-TR-5, D-AAC-11, D-AAC-4, D-AS-1 | src/archon/resolver.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
-| R11 | AC-12, INV-1, INV-4, PW-3 | D-ENG-1, D-INV-4, D-PW-3, D-AAC-9, D-INV-1 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts | test/verify.test.ts, test/invocation.test.ts, test/engagement.test.ts, test/protocol.test.ts, test/pairwise.test.ts | D:✓ C:✓ T:✓ |
+| R6 | AC-8, DC-4, PP-4 | D-DC-4, D-PP-4, D-AAC-10 | src/archon/issuer.ts, src/capability.ts, src/verify.ts, src/profiles/poly.ts | test/delegation.test.ts, test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| R7 | AC-5, AC-6, INV-1, INV-2, INV-3, PP-5 | D-INV-1, D-PM-1, D-AAC-7, D-AAC-3, D-INV-2, D-INV-3, D-PP-5 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts, src/profiles/poly.ts | test/verify.test.ts, test/invocation.test.ts, test/protocol.test.ts, test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| R8 | DC-1, DC-2, DC-5, PP-4 | D-AS-2, D-AS-3, D-DC-1, D-DC-5, D-PP-4, D-DC-2 | src/verify.ts, src/profiles/poly.ts | test/delegation.test.ts, test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| R9 | AC-13, AC-7, AC-8, PP-3, PP-5 | D-PP-3, D-PP-5, D-AAC-11, D-AAC-4, D-AS-1, D-AAC-10 | src/verify.ts, src/archon/resolver.ts, src/capability.ts, src/profiles/poly.ts | test/issuer.test.ts, test/verify.test.ts, test/archon.test.ts, test/delegation.test.ts, test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| R10 | AC-13, AC-7, PP-3, PP-5, TR-5 | D-PP-5, D-TR-5, D-AAC-11, D-AAC-4, D-AS-1, D-PP-3 | src/archon/resolver.ts, src/verify.ts, src/profiles/poly.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts, test/poly-profile.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
+| R11 | AC-12, INV-1, INV-4, PW-3, PP-1 | D-ENG-1, D-INV-4, D-PW-3, D-AAC-9, D-INV-1, D-PP-1 | src/verify.ts, src/archon/issuer.ts, src/protocol.ts, src/profiles/poly.ts | test/verify.test.ts, test/invocation.test.ts, test/engagement.test.ts, test/protocol.test.ts, test/pairwise.test.ts, test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
 | R12 | AC-12, PW-1, PW-2, PW-3, PW-4 | D-PW-1, D-PW-2, D-AAC-9, D-PW-3, D-PW-4 | src/verify.ts, src/archon/issuer.ts | test/verify.test.ts, test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | R13 | AC-11, INV-5 | D-AAC-8, D-INV-5 | src/archon/issuer.ts, src/verify.ts | test/step-up.test.ts, test/invocation.test.ts | D:✓ C:✓ T:✓ |
-| R14 | — | D-PM-2, D-PM-5, D-SCH-1 | src/archon/transport.ts, src/protocol.ts, src/transport.ts | test/protocol.test.ts, test/schema.test.ts | D:✓ C:✓ T:✓ |
+| R14 | PP-1, PP-4 | D-PP-1, D-PM-2, D-PM-5, D-SCH-1, D-PP-4 | src/archon/transport.ts, src/profiles/poly.ts, src/protocol.ts, src/transport.ts | test/protocol.test.ts, test/schema.test.ts, test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
 | R15 | AC-6 | D-AAC-3 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
-| R16 | AC-10, TR-1, TR-2, TR-3, TR-4, TR-5 | D-PM-4, D-TR-3, D-AAC-6, D-TR-1, D-TR-2, D-TR-4, D-TR-5 | src/verify.ts, src/archon/issuer.ts | test/step-up.test.ts, test/trust-registry.test.ts | D:✓ C:✓ T:✓ |
+| R16 | AC-10, PP-2, TR-1, TR-2, TR-3, TR-4, TR-5 | D-PP-2, D-PM-4, D-TR-3, D-AAC-6, D-TR-1, D-TR-2, D-TR-4, D-TR-5 | src/profiles/poly.ts, src/verify.ts, src/archon/issuer.ts | test/step-up.test.ts, test/trust-registry.test.ts, test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
 | AC-1 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-2 | — | D-AAC-1 | src/verify.ts | test/verify.test.ts | D:✓ C:✓ T:✓ |
 | AC-3 | — | D-AAC-11, D-AAC-2 | src/archon/issuer.ts, src/archon/signatures.ts, src/verify.ts | test/archon.test.ts, test/issuer.test.ts, test/verify.test.ts | D:✓ C:✓ T:✓ |
@@ -47,6 +47,11 @@ Foundational `R*` inherit coverage from the feature requirements that realize th
 | INV-3 | — | D-INV-3 | src/verify.ts | test/invocation.test.ts | D:✓ C:✓ T:✓ |
 | INV-4 | — | D-ENG-1, D-INV-4 | src/archon/issuer.ts, src/verify.ts | test/engagement.test.ts, test/invocation.test.ts, test/protocol.test.ts | D:✓ C:✓ T:✓ |
 | INV-5 | — | D-INV-5 | src/verify.ts | test/invocation.test.ts | D:✓ C:✓ T:✓ |
+| PP-1 | — | D-PP-1 | src/profiles/poly.ts | test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| PP-2 | — | D-PP-2 | src/profiles/poly.ts | test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| PP-3 | — | D-PP-3 | src/profiles/poly.ts | test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| PP-4 | — | D-PP-4 | src/profiles/poly.ts | test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
+| PP-5 | — | D-PP-5 | src/profiles/poly.ts | test/poly-profile.test.ts | D:✓ C:✓ T:✓ |
 | PW-1 | — | D-PW-1 | src/archon/issuer.ts | test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | PW-2 | — | D-PW-2 | src/archon/issuer.ts | test/pairwise.test.ts | D:✓ C:✓ T:✓ |
 | PW-3 | — | D-PW-3 | src/archon/issuer.ts, src/verify.ts | test/pairwise.test.ts | D:✓ C:✓ T:✓ |

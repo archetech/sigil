@@ -22,6 +22,11 @@ export type { VerifierPolicy, RequestBody, ChallengeBody, PresentationBody, Invo
 export { createArchonTransport } from './archon/transport.ts';
 export type { DidCommKeymaster } from './archon/transport.ts';
 
+// Integration profiles: Sigil consumed through a host the relying party already runs (R14).
+export { createPolyVerifier, mandateOf, assuranceIndex } from './profiles/poly.ts';
+export type { PolyVerifier, PolyVerifierOptions, PolyClaims, PolyVerifiedClaims, PolyRefusal, PolyMandate, PolyScope } from './profiles/poly.ts';
+export { ASSURANCE_LADDER } from './verify.ts';
+
 export type {
   Jwk,
   Proof,
