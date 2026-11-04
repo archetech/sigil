@@ -6,8 +6,8 @@ rely on session memory for process corrections.** (Contributors should also read
 ## Governance
 
 - Sigil is a project under the [Archonomicon](https://github.com/archetech/archonomicon). Changes to project
-  *rules* or process go through a **Nomicon proposal** (a PR to the archonomicon), agreed by the players — not the
-  code workflow below.
+  *rules* or process go through a **Nomicon proposal** (a PR to the archonomicon), adopted as its rules provide —
+  not the code workflow below. [`GOVERNANCE.md`](GOVERNANCE.md) cites the rules that apply here and who decides.
 - Code and design changes follow the issue → PR → merge flow.
 
 ## Branching & git hygiene
