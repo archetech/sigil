@@ -66,3 +66,8 @@ contributors.
   `sigil-v0-requirements.md` saw unresolved tensions that no longer existed. When a slice answers a question asked
   of a higher-level doc, amend that doc in the same PR and cite the realizing IDs; don't leave the answer implicit
   in a lower layer.
+- **2026-11-03 — Prose after the last requirement in a `Requirements/` file is attributed to that requirement.**
+  The generator takes each feature requirement's block to run to the next declaration, and every `R*` it mentions
+  becomes a "realized by" trace. A closing note that said "window per `R9`" sat after `AC-12`, so the matrix credited
+  `AC-12` with realizing `R9` (#43). Keep trailing notes free of requirement IDs, or put them before the first
+  declaration — and regenerate the matrix in the same PR as any `Requirements/` edit (#38 did not).
